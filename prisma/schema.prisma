@@ -1,0 +1,724 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id                   String           @id @default(cuid())
+  clerkOrgId           String           @unique
+  name                 String
+  slug                 String           @unique
+  logoUrl              String?
+  plan                 OrgPlan          @default(FREE)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  basecampAccessToken  String?
+  basecampAccountId    String?
+  basecampAccountName  String?
+  basecampConnectedAt  DateTime?
+  basecampRefreshToken String?
+  libraryNote          String?
+  templatesNote        String?
+  basecampPeople       BasecampPerson[]
+  docs                 Doc[]
+  folders              DocFolder[]
+  milestones           Milestone[]
+  notifications        Notification[]
+  memberships          OrgMembership[]
+  phaseTemplates       PhaseTemplate[]
+  pings                Ping[]
+  projects             Project[]
+  files                ProjectFile[]
+  teams                Team[]
+
+  @@index([clerkOrgId])
+}
+
+model User {
+  id                    String               @id @default(cuid())
+  clerkUserId           String?              @unique
+  email                 String               @unique
+  name                  String
+  avatarUrl             String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  bio                   String?
+  jobTitle              String?
+  isPlaceholder         Boolean              @default(false)
+  emailNotifEnabled     Boolean              @default(true)
+  emailNotifTasks       Boolean              @default(true)
+  emailNotifDeliverables Boolean             @default(true)
+  emailNotifMentions    Boolean              @default(true)
+  emailNotifLibrary     Boolean              @default(false)
+  emailDigest           Boolean              @default(true)
+  lastDigestSentAt      DateTime?
+  basecampMappings      BasecampPerson[]
+  deliverableVersions   DeliverableVersion[] @relation("DeliverableVersionUploader")
+  docs                  Doc[]
+  messages              Message[]
+  notifications         Notification[]
+  memberships           OrgMembership[]
+  reviewedDeliverables   PhaseDeliverable[]   @relation("DeliverableReviewer")
+  submittedDeliverables  PhaseDeliverable[]   @relation("DeliverableSubmitter")
+  assignedDeliverables   PhaseDeliverable[]   @relation("DeliverableAssignedReviewer")
+  studentSubmissions     StudentSubmission[]  @relation("StudentSubmissionUser")
+  reviewedSubmissions    StudentSubmission[]  @relation("StudentSubmissionReviewer")
+  pingParticipants      PingParticipant[]
+  createdProjects       Project[]            @relation("ProjectCreator")
+  uploadedFiles         ProjectFile[]
+  projectMembers        ProjectMember[]
+  posts                 ProjectPost[]
+  postReplies           ProjectPostReply[]
+  reactions             Reaction[]
+  assignedTasks         Task[]               @relation("TaskAssignee")
+  createdTasks          Task[]               @relation("TaskCreator")
+  taskComments          TaskComment[]
+
+  @@index([clerkUserId])
+  @@index([email])
+}
+
+model OrgMembership {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MemberRole   @default(MEMBER)
+  joinedAt       DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model Team {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  color          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  projects       ProjectTeam[]
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Project {
+  id             String              @id @default(cuid())
+  organizationId String
+  creatorId      String
+  name           String
+  description    String?
+  status         ProjectStatus       @default(ACTIVE)
+  color          String?
+  iconEmoji      String?
+  startDate      DateTime?
+  targetDate     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  pinnedAt       DateTime?
+  templateId     String?
+  nextSession    String?
+  importLog      BasecampImportLog?
+  docs           Doc[]
+  folders        DocFolder[]
+  milestones     Milestone[]
+  pings          Ping[]
+  creator        User                @relation("ProjectCreator", fields: [creatorId], references: [id])
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template       PhaseTemplate?      @relation(fields: [templateId], references: [id])
+  files          ProjectFile[]
+  invitations    ProjectInvitation[]
+  mandate        ProjectMandate?
+  members        ProjectMember[]
+  phases         ProjectPhase[]
+  posts          ProjectPost[]
+  teams          ProjectTeam[]
+  tasks          Task[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model ProjectTeam {
+  projectId String
+  teamId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, teamId])
+}
+
+model ProjectMandate {
+  id                 String    @id @default(cuid())
+  projectId          String    @unique
+  projectDescription String?
+  timelineWeeks      Int?
+  timelineTolerance  String?
+  startDate          DateTime?
+  endDate            DateTime?
+  budget             String?
+  budgetTolerance    String?
+  scope              String?
+  keyDeliverables    String?
+  nextSteps          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  joinedAt  DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ProjectInvitation {
+  id                String   @id @default(cuid())
+  projectId         String
+  email             String
+  clerkInvitationId String?
+  createdAt         DateTime @default(now())
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, email])
+  @@index([projectId])
+  @@index([email])
+}
+
+model Task {
+  id                  String        @id @default(cuid())
+  organizationId      String
+  projectId           String
+  creatorId           String
+  assigneeId          String?
+  parentTaskId        String?
+  title               String
+  description         String?
+  status              TaskStatus    @default(TODO)
+  priority            TaskPriority  @default(MEDIUM)
+  position            Float         @default(0)
+  dueDate             DateTime?
+  completedAt         DateTime?
+  sourcePingMessageId String?       @unique
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  phaseId             String?
+  pings               Ping[]
+  assignee            User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator             User          @relation("TaskCreator", fields: [creatorId], references: [id])
+  parentTask          Task?         @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
+  subtasks            Task[]        @relation("TaskSubtasks")
+  phase               ProjectPhase? @relation(fields: [phaseId], references: [id])
+  project             Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourcePingMessage   Message?      @relation("MessagePromotedTask", fields: [sourcePingMessageId], references: [id])
+  comments            TaskComment[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([projectId, status])
+  @@index([assigneeId])
+  @@index([phaseId])
+}
+
+model Ping {
+  id             String            @id @default(cuid())
+  organizationId String
+  type           PingType
+  title          String?
+  projectId      String?
+  taskId         String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  category       PingCategory?
+  messages       Message[]
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?          @relation(fields: [projectId], references: [id])
+  task           Task?             @relation(fields: [taskId], references: [id])
+  participants   PingParticipant[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([taskId])
+}
+
+model PingParticipant {
+  pingId     String
+  userId     String
+  lastReadAt DateTime?
+  joinedAt   DateTime  @default(now())
+  ping       Ping      @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pingId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  pingId         String
+  authorId       String
+  body           String
+  threadParentId String?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  attachments    Attachment[]
+  author         User         @relation(fields: [authorId], references: [id])
+  ping           Ping         @relation(fields: [pingId], references: [id], onDelete: Cascade)
+  threadParent   Message?     @relation("MessageThread", fields: [threadParentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  threadReplies  Message[]    @relation("MessageThread")
+  reactions      Reaction[]
+  promotedTask   Task?        @relation("MessagePromotedTask")
+
+  @@index([pingId])
+  @@index([pingId, threadParentId])
+  @@index([authorId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  messageId String
+  name      String
+  url       String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model Milestone {
+  id             String       @id @default(cuid())
+  organizationId String
+  projectId      String
+  title          String
+  description    String?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([organizationId])
+}
+
+model DocFolder {
+  id             String        @id
+  organizationId String
+  projectId      String?
+  isTemplate     Boolean       @default(false)
+  name           String
+  parentId       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  docs           Doc[]
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent         DocFolder?    @relation("FolderChildren", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children       DocFolder[]   @relation("FolderChildren")
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  files          ProjectFile[]
+
+  @@index([projectId])
+  @@index([parentId])
+  @@index([organizationId])
+}
+
+model Doc {
+  id             String       @id @default(cuid())
+  organizationId String
+  projectId      String?
+  isTemplate     Boolean      @default(false)
+  authorId       String
+  title          String
+  content        String       @default("")
+  emoji          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  docType        DocType?
+  importedAuthor String?
+  folderId       String?
+  author         User         @relation(fields: [authorId], references: [id])
+  folder         DocFolder?   @relation(fields: [folderId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([folderId])
+  @@index([organizationId])
+}
+
+model TaskComment {
+  id        String    @id @default(cuid())
+  taskId    String
+  authorId  String
+  body      String
+  editedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([authorId])
+}
+
+model ProjectFile {
+  id                      String               @id @default(cuid())
+  organizationId          String
+  projectId               String?
+  isTemplate              Boolean              @default(false)
+  uploadedById            String
+  name                    String
+  url                     String
+  utKey                   String?              @unique
+  mimeType                String
+  size                    Int
+  createdAt               DateTime             @default(now())
+  folderId                String?
+  importedAuthor          String?
+  deliverableVersionFiles DeliverableVersion[] @relation("DeliverableVersionFile")
+  submittedDeliverable    PhaseDeliverable?    @relation("DeliverableSubmission")
+  studentSubmission       StudentSubmission?   @relation("StudentSubmissionFile")
+  folder                  DocFolder?           @relation(fields: [folderId], references: [id])
+  organization            Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project                 Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy              User                 @relation(fields: [uploadedById], references: [id])
+
+  @@index([projectId])
+  @@index([folderId])
+  @@index([organizationId])
+}
+
+model PhaseTemplate {
+  id             String               @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  phases         PhaseTemplatePhase[]
+  projects       Project[]
+
+  @@index([organizationId])
+}
+
+model PhaseTemplatePhase {
+  id           String                     @id @default(cuid())
+  templateId   String
+  name         String
+  guidance     String?
+  order        Int
+  durationDays Int?
+  deliverables PhaseTemplateDeliverable[]
+  template     PhaseTemplate              @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, order])
+  @@index([templateId])
+}
+
+model PhaseTemplateDeliverable {
+  id             String             @id @default(cuid())
+  phaseId        String
+  title          String
+  description    String?
+  isRequired     Boolean            @default(true)
+  order          Int
+  submissionType SubmissionType     @default(FILE)
+  phase          PhaseTemplatePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  @@index([phaseId])
+}
+
+model ProjectPhase {
+  id           String             @id @default(cuid())
+  projectId    String
+  name         String
+  guidance     String?
+  order        Int
+  status       PhaseStatus        @default(NOT_STARTED)
+  isLocked     Boolean            @default(true)
+  dueDate      DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  deliverables PhaseDeliverable[]
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+
+  @@unique([projectId, order])
+  @@index([projectId])
+}
+
+model PhaseDeliverable {
+  id                 String               @id @default(cuid())
+  phaseId            String
+  title              String
+  description        String?
+  submissionKind     SubmissionKind?
+  requiresFileUpload Boolean              @default(true)
+  dueDate            DateTime?
+  order              Int
+  status             DeliverableStatus    @default(NOT_SUBMITTED)
+  submittedFileId    String?              @unique
+  submittedById      String?
+  submittedAt        DateTime?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  assignedReviewerId String?
+  versions            DeliverableVersion[]
+  studentSubmissions  StudentSubmission[]
+  phase               ProjectPhase         @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  reviewedBy          User?                @relation("DeliverableReviewer", fields: [reviewedById], references: [id])
+  submittedBy         User?                @relation("DeliverableSubmitter", fields: [submittedById], references: [id])
+  submittedFile       ProjectFile?         @relation("DeliverableSubmission", fields: [submittedFileId], references: [id])
+  assignedReviewer    User?                @relation("DeliverableAssignedReviewer", fields: [assignedReviewerId], references: [id])
+
+  @@index([phaseId])
+}
+
+model DeliverableVersion {
+  id            String           @id @default(cuid())
+  deliverableId String
+  versionNumber Int
+  fileId        String?
+  uploadedById  String
+  note          String?
+  uploadedAt    DateTime         @default(now())
+  deliverable   PhaseDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  file          ProjectFile?     @relation("DeliverableVersionFile", fields: [fileId], references: [id])
+  uploadedBy    User             @relation("DeliverableVersionUploader", fields: [uploadedById], references: [id])
+
+  @@unique([deliverableId, versionNumber])
+  @@index([deliverableId])
+}
+
+model StudentSubmission {
+  id            String            @id @default(cuid())
+  deliverableId String
+  userId        String
+  fileId        String?           @unique
+  status        DeliverableStatus @default(NOT_SUBMITTED)
+  submittedAt   DateTime?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNote    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  deliverable  PhaseDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  user         User             @relation("StudentSubmissionUser", fields: [userId], references: [id])
+  file         ProjectFile?     @relation("StudentSubmissionFile", fields: [fileId], references: [id])
+  reviewedBy   User?            @relation("StudentSubmissionReviewer", fields: [reviewedById], references: [id])
+
+  @@unique([deliverableId, userId])
+  @@index([deliverableId])
+  @@index([userId])
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  kind           NotificationKind
+  read           Boolean          @default(false)
+  readAt         DateTime?
+  title          String
+  body           String?
+  href           String
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([organizationId])
+}
+
+model ProjectPost {
+  id        String             @id @default(cuid())
+  projectId String
+  authorId  String
+  title     String
+  body      String
+  pinnedAt  DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  author    User               @relation(fields: [authorId], references: [id])
+  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  replies   ProjectPostReply[]
+
+  @@index([projectId])
+  @@index([authorId])
+}
+
+model ProjectPostReply {
+  id             String      @id @default(cuid())
+  postId         String
+  authorId       String
+  importedAuthor String?
+  body           String
+  createdAt      DateTime    @default(now())
+  author         User        @relation(fields: [authorId], references: [id])
+  post           ProjectPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model BasecampImportLog {
+  id               String   @id @default(cuid())
+  projectId        String   @unique
+  status           String
+  tasksCount       Int      @default(0)
+  messagesCount    Int      @default(0)
+  foldersCount     Int      @default(0)
+  filesCount       Int      @default(0)
+  failedFilesCount Int      @default(0)
+  failedFiles      Json     @default("[]")
+  phaseErrors      Json     @default("[]")
+  lastImportedAt   DateTime @default(now())
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model BasecampPerson {
+  id               String       @id @default(cuid())
+  organizationId   String
+  basecampPersonId String
+  basecampName     String
+  basecampEmail    String?
+  coreUserId       String?
+  isPlaceholder    Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  coreUser         User?        @relation(fields: [coreUserId], references: [id])
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, basecampPersonId])
+  @@index([organizationId])
+  @@index([coreUserId])
+}
+
+enum OrgPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+  NO_PRIORITY
+}
+
+enum PingType {
+  DIRECT
+  GROUP
+  CONTEXTUAL
+}
+
+enum PingCategory {
+  ANNOUNCEMENT
+  DISCUSSION
+  UPDATE
+}
+
+enum DocType {
+  DECISION
+  REFERENCE
+  NOTE
+}
+
+enum PhaseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum DeliverableStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REVISION_NEEDED
+}
+
+enum SubmissionType {
+  FILE
+  DOC
+}
+
+enum SubmissionKind {
+  INDIVIDUAL
+  GROUP
+}
+
+enum NotificationKind {
+  DELIVERABLE_SUBMITTED
+  DELIVERABLE_APPROVED
+  DELIVERABLE_REVISION
+  DELIVERABLE_ASSIGNED
+  PHASE_UNLOCKED
+  TASK_ASSIGNED
+  CHAT_MENTION
+  LIBRARY_UPLOAD
+  MANDATE_UPDATED
+}
