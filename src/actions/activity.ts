@@ -25,6 +25,16 @@ export async function getActivityFeed(limit = 60): Promise<ActivityItem[]> {
 
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
 
+  const dbUser = await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } });
+  const hiddenIds = dbUser
+    ? new Set(
+        (await db.activityHide.findMany({
+          where: { userId: dbUser.id, organizationId: org.id },
+          select: { itemId: true },
+        })).map((h) => h.itemId)
+      )
+    : new Set<string>();
+
   const [projects, tasks, doneTasks, messages, files, docs, submitted, reviewed] = await Promise.all([
     db.project.findMany({
       where: { organizationId: org.id, createdAt: { gte: cutoff } },
@@ -225,5 +235,5 @@ export async function getActivityFeed(limit = 60): Promise<ActivityItem[]> {
   ];
 
   items.sort((a, b) => b.at.getTime() - a.at.getTime());
-  return items.slice(0, limit);
+  return items.filter((i) => !hiddenIds.has(i.id)).slice(0, limit);
 }

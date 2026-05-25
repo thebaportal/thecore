@@ -22,6 +22,14 @@ export type BriefingInput = {
   memberCount?: number;
   completedToday?: number;
   pendingReviews?: number;
+  overdueTaskCount?: number;
+  activePhaseSummary?: {
+    projectName: string;
+    phaseName: string;
+    submitted: number;
+    revisionNeeded: number;
+    notSubmitted: number;
+  }[];
 };
 
 export async function getDailyBriefing(input: BriefingInput): Promise<string> {
@@ -35,36 +43,53 @@ export async function getDailyBriefing(input: BriefingInput): Promise<string> {
 
   if (input.isAdminView) {
     const lines: string[] = [];
-    const org = input.orgName ?? "your organisation";
+    const org = input.orgName ?? "your class";
     if (input.activeProjectNames && input.activeProjectNames.length > 0) {
-      lines.push(`Active projects: ${input.activeProjectNames.join(", ")}`);
+      lines.push(`Active student projects: ${input.activeProjectNames.join(", ")}`);
     } else if (input.activeProjects) {
-      lines.push(`Active projects: ${input.activeProjects}`);
+      lines.push(`Active student projects: ${input.activeProjects}`);
     }
-    if (input.memberCount) lines.push(`Team members: ${input.memberCount}`);
-    if (input.completedToday) lines.push(`Tasks completed today: ${input.completedToday}`);
-    if (input.pendingReviews) lines.push(`Deliverables awaiting review: ${input.pendingReviews}`);
+    if (input.memberCount) lines.push(`Students/participants: ${input.memberCount}`);
+    if (input.pendingReviews) lines.push(`Deliverables awaiting instructor review: ${input.pendingReviews}`);
+    if (input.overdueTaskCount) lines.push(`Overdue tasks (across all groups): ${input.overdueTaskCount}`);
+    if (input.activePhaseSummary && input.activePhaseSummary.length > 0) {
+      const phaseLines = input.activePhaseSummary.map((p) =>
+        `${p.projectName} — Phase: ${p.phaseName} (${p.submitted} submitted, ${p.revisionNeeded} need revision, ${p.notSubmitted} not yet submitted)`
+      );
+      lines.push(`Current phase progress:\n${phaseLines.join("\n")}`);
+    }
     if (input.atRiskProjects.length > 0) {
-      lines.push(`At-risk or behind: ${
+      lines.push(`Groups behind or at risk: ${
         input.atRiskProjects.map((p) => `${p.name} — ${p.completionPct}% complete${p.daysLeft < 0 ? `, ${Math.abs(p.daysLeft)}d overdue` : `, ${p.daysLeft}d left`}`).join("; ")
       }`);
     }
-    if (input.unreadPings > 0) lines.push(`Unread conversations: ${input.unreadPings}`);
+    if (input.unreadPings > 0) lines.push(`Unread student messages: ${input.unreadPings}`);
     context = lines.length > 0 ? lines.join("\n") : "No active projects yet.";
-    prompt = `You are a sharp, direct assistant for ${input.userName}, who manages ${org}.
+    prompt = `You are a briefing assistant for ${input.userName}, an instructor running a project-based learning program at ${org}.
 
-Current workspace snapshot:
+IMPORTANT CONTEXT — read before responding:
+- This is a classroom training simulation. Students are learning Business Analysis and Project Management skills.
+- They work on SIMULATED projects (e.g., designing an e-commerce app, an insurance portal). These are NOT real products being built for real customers.
+- There are NO real suppliers, customers, delivery dates, Q2 targets, marketing budgets, or commercial operations. Those concepts DO NOT EXIST here.
+- Everything is group work with defined phases and deliverables that the instructor reviews and approves.
+- Your role is to help the instructor understand student group progress and what to focus on today.
+
+Current classroom snapshot:
 ${context}
 
-Write 2–3 plain sentences as a morning briefing. Rules:
-- Use plain prose only — no markdown, no bullet points, no headers, no hashtags
-- Name specific projects and numbers from the data above
-- Be action-oriented: tell ${input.userName} what needs attention right now
-- If there are pending reviews, lead with that
-- If at-risk projects exist, name them and suggest a next step
-- If everything looks fine, say so briefly and suggest one proactive thing
-- Do not use placeholders like [project name] — only reference real data provided above
-- Do not start with "Good morning" or similar pleasantries`;
+Respond in EXACTLY this format — 4 lines, each starting with the label shown, nothing else:
+PROJECT STATUS: [one sentence about overall group progress across active phases]
+KEY RISK: [one sentence about the most important risk — late submissions, revision-needed deliverables, or groups falling behind]
+RECOMMENDED ACTION: [one specific action the instructor should take today — e.g., review a specific submission, unlock the next phase, follow up with a group]
+IMPORTANT UPDATE: [one encouraging or informational note about student progress]
+
+Rules:
+- Use ONLY the data provided in the classroom snapshot above
+- Reference actual project names and numbers from the data
+- Use educational language: students, groups, phases, deliverables, submissions
+- Never mention suppliers, customers, Q2, marketing, delivery schedules, or any commercial concept
+- Each response must be exactly one sentence per label
+- No markdown, no bullet points, no extra text or commentary outside the 4 labeled lines`;
   } else {
     const lines: string[] = [];
     if (input.overdueTasks.length > 0) {
@@ -100,7 +125,7 @@ Write 2–3 plain sentences as a morning briefing. Rules:
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 180,
+    max_tokens: 300,
     messages: [{ role: "user", content: prompt }],
   });
 

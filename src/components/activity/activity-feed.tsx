@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { FolderKanban, CheckSquare, CheckCircle2, MessageCircle, Paperclip, FileText, Upload, RotateCcw } from "lucide-react";
+import { FolderKanban, CheckSquare, CheckCircle2, MessageCircle, Paperclip, FileText, Upload, RotateCcw, X } from "lucide-react";
 import type { ActivityItem } from "@/actions/activity";
+import { hideActivityItem } from "@/actions/activity-hide";
 import { cn } from "@/lib/utils";
 
 function Avatar({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
@@ -31,20 +34,37 @@ function TimeAgo({ date }: { date: Date }) {
 }
 
 function ActivityRow({
+  id,
   actor,
   at,
   icon,
   iconBg,
   children,
 }: {
+  id: string;
   actor: { name: string; avatarUrl: string | null };
   at: Date;
   icon: React.ReactNode;
   iconBg: string;
   children: React.ReactNode;
 }) {
+  const [isPending, startTransition] = useTransition();
+  const [hidden, setHidden] = useState(false);
+  const router = useRouter();
+
+  if (hidden) return null;
+
+  function dismiss(e: React.MouseEvent) {
+    e.preventDefault();
+    setHidden(true);
+    startTransition(async () => {
+      await hideActivityItem(id);
+      router.refresh();
+    });
+  }
+
   return (
-    <div className="flex items-start gap-3 py-3.5 border-b border-border last:border-0">
+    <div className={cn("group flex items-start gap-3 py-3.5 border-b border-border last:border-0", isPending && "opacity-40 pointer-events-none")}>
       <div className="relative shrink-0">
         <Avatar name={actor.name} avatarUrl={actor.avatarUrl} />
         <span className={cn("absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2 border-card", iconBg)}>
@@ -54,14 +74,23 @@ function ActivityRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm text-foreground leading-snug">{children}</p>
       </div>
-      <TimeAgo date={at} />
+      <div className="flex items-center gap-2 shrink-0">
+        <TimeAgo date={at} />
+        <button
+          onClick={dismiss}
+          title="Remove from feed"
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
 
 function ProjectCreatedRow({ item }: { item: Extract<ActivityItem, { kind: "project_created" }> }) {
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-blue-500" icon={<FolderKanban className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-blue-500" icon={<FolderKanban className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> created project{" "}
       <Link href={`/projects/${item.project.id}`} className="font-medium text-primary hover:underline">
         {item.project.iconEmoji && <span className="mr-1">{item.project.iconEmoji}</span>}
@@ -73,7 +102,7 @@ function ProjectCreatedRow({ item }: { item: Extract<ActivityItem, { kind: "proj
 
 function TaskCreatedRow({ item }: { item: Extract<ActivityItem, { kind: "task_created" }> }) {
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-amber-500" icon={<CheckSquare className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-amber-500" icon={<CheckSquare className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> added task{" "}
       <Link href={`/projects/${item.project.id}/tasks`} className="font-medium text-foreground hover:text-primary hover:underline">
         {item.task.title}
@@ -88,7 +117,7 @@ function TaskCreatedRow({ item }: { item: Extract<ActivityItem, { kind: "task_cr
 
 function TaskDoneRow({ item }: { item: Extract<ActivityItem, { kind: "task_done" }> }) {
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-emerald-500" icon={<CheckCircle2 className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-emerald-500" icon={<CheckCircle2 className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> completed{" "}
       <Link href={`/projects/${item.project.id}/tasks`} className="font-medium text-foreground hover:text-primary hover:underline line-through decoration-muted-foreground/50">
         {item.task.title}
@@ -105,7 +134,7 @@ function MessageSentRow({ item }: { item: Extract<ActivityItem, { kind: "message
   const preview = item.body.length > 80 ? item.body.slice(0, 80) + "…" : item.body;
   const label = item.ping.title ?? (item.ping.type === "DIRECT" ? "a direct conversation" : "a group ping");
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-violet-500" icon={<MessageCircle className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-violet-500" icon={<MessageCircle className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> sent a message in{" "}
       <Link href={`/inbox/${item.ping.id}`} className="font-medium text-primary hover:underline">
         {label}
@@ -119,7 +148,7 @@ function MessageSentRow({ item }: { item: Extract<ActivityItem, { kind: "message
 
 function FileUploadedRow({ item }: { item: Extract<ActivityItem, { kind: "file_uploaded" }> }) {
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-teal-500" icon={<Paperclip className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-teal-500" icon={<Paperclip className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> uploaded{" "}
       <span className="font-medium text-foreground">{item.fileName}</span>{" "}
       to{" "}
@@ -132,7 +161,7 @@ function FileUploadedRow({ item }: { item: Extract<ActivityItem, { kind: "file_u
 
 function DocCreatedRow({ item }: { item: Extract<ActivityItem, { kind: "doc_created" }> }) {
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-indigo-500" icon={<FileText className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-indigo-500" icon={<FileText className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> created doc{" "}
       <Link href={`/projects/${item.project.id}/docs/${item.docId}`} className="font-medium text-primary hover:underline">
         {item.emoji && <span className="mr-1">{item.emoji}</span>}
@@ -148,7 +177,7 @@ function DocCreatedRow({ item }: { item: Extract<ActivityItem, { kind: "doc_crea
 
 function DeliverableSubmittedRow({ item }: { item: Extract<ActivityItem, { kind: "deliverable_submitted" }> }) {
   return (
-    <ActivityRow actor={item.actor} at={item.at} iconBg="bg-amber-500" icon={<Upload className="w-2.5 h-2.5 text-white" />}>
+    <ActivityRow id={item.id} actor={item.actor} at={item.at} iconBg="bg-amber-500" icon={<Upload className="w-2.5 h-2.5 text-white" />}>
       <span className="font-medium">{item.actor.name}</span> submitted{" "}
       <Link href={`/projects/${item.project.id}/phases`} className="font-medium text-foreground hover:text-primary hover:underline">
         {item.deliverableTitle}
@@ -167,6 +196,7 @@ function DeliverableReviewedRow({ item }: { item: Extract<ActivityItem, { kind: 
   const approved = item.decision === "APPROVED";
   return (
     <ActivityRow
+      id={item.id}
       actor={item.actor}
       at={item.at}
       iconBg={approved ? "bg-emerald-500" : "bg-amber-500"}

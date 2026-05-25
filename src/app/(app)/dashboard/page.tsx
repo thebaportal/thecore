@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  format, isToday, isPast, formatDistanceToNow, differenceInDays,
+  format, isPast, formatDistanceToNow, differenceInDays,
 } from "date-fns";
 import {
   ArrowRight, CheckSquare, RotateCcw,
-  Check, Clock, MessageSquare, FolderKanban, Users, CheckCheck,
-  AlertTriangle, Plus, FileText, Paperclip, Upload, CheckCircle2,
+  Check, Clock, MessageSquare, FolderKanban,
+  Plus, FileText, Paperclip, Upload, CheckCircle2,
 } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
@@ -28,11 +28,6 @@ function getGreeting(name: string) {
   if (hour < 17) return `Good afternoon, ${first}`;
   return `Good evening, ${first}`;
 }
-
-const PRIORITY_DOT: Record<string, string> = {
-  URGENT: "bg-red-500", HIGH: "bg-orange-500",
-  MEDIUM: "bg-amber-400", LOW: "bg-blue-400", NO_PRIORITY: "bg-gray-300",
-};
 
 type DeliverableStatus = "NOT_SUBMITTED" | "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REVISION_NEEDED";
 
@@ -110,7 +105,7 @@ export default async function DashboardPage() {
 
   const {
     user, currentUserRole,
-    focusTasks, projects, recentPings, unreadPingCount,
+    projects, recentPings, unreadPingCount,
     stats, unlockedPhases, allPhases, revisionDeliverables,
   } = data;
 
@@ -120,22 +115,19 @@ export default async function DashboardPage() {
   // ── STUDENT VIEW ────────────────────────────────────────────────────────────
 
   if (isStudent) {
-    // Group allPhases by project
     const phasesByProject = new Map<string, typeof allPhases>();
     for (const p of allPhases) {
       if (!phasesByProject.has(p.projectId)) phasesByProject.set(p.projectId, []);
       phasesByProject.get(p.projectId)!.push(p);
     }
 
-    // Group unlocked phases by project, skip COMPLETED ones for the main view
     const activePhasesMap = new Map<string, typeof unlockedPhases>();
     for (const p of unlockedPhases) {
-      if (p.status === "COMPLETED") continue; // already done, not the focus
+      if (p.status === "COMPLETED") continue;
       if (!activePhasesMap.has(p.projectId)) activePhasesMap.set(p.projectId, []);
       activePhasesMap.get(p.projectId)!.push(p);
     }
 
-    // Distinct projects with phases
     const projectIds = [...new Set(allPhases.map((p) => p.projectId))];
 
     return (
@@ -144,7 +136,6 @@ export default async function DashboardPage() {
           {getGreeting(user.name)}
         </h1>
 
-        {/* ── No projects at all ── */}
         {projectIds.length === 0 && (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
             <p className="text-sm text-muted-foreground">
@@ -153,7 +144,6 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── Per-project phase card ── */}
         {projectIds.map((projectId) => {
           const projectPhases = phasesByProject.get(projectId) ?? [];
           const activePhases  = activePhasesMap.get(projectId) ?? [];
@@ -162,17 +152,16 @@ export default async function DashboardPage() {
 
           if (!projectMeta) return null;
 
-          const totalPhases     = projectPhases.length;
-          const completedCount  = projectPhases.filter((p) => p.status === "COMPLETED").length;
-          const currentPhase    = activePhases[0] ?? null; // first IN_PROGRESS or NOT_STARTED unlocked
-          const color           = (projectMeta as { color?: string | null }).color ?? "#1E3A8A";
+          const totalPhases    = projectPhases.length;
+          const completedCount = projectPhases.filter((p) => p.status === "COMPLETED").length;
+          const currentPhase   = activePhases[0] ?? null;
+          const color          = (projectMeta as { color?: string | null }).color ?? "#1E3A8A";
 
           const allLocked = activePhases.length === 0 && completedCount === 0;
           const allDone   = completedCount === totalPhases && totalPhases > 0;
 
           return (
             <div key={projectId} className="rounded-xl border border-border bg-card overflow-hidden">
-              {/* Project header */}
               <div className="px-5 pt-5 pb-4 border-b border-border/50">
                 <div className="flex items-center gap-2.5">
                   <div
@@ -202,7 +191,6 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
 
-                {/* Progress strip */}
                 {totalPhases > 0 && (
                   <div className="mt-3">
                     <PhaseStrip phases={projectPhases} />
@@ -210,7 +198,6 @@ export default async function DashboardPage() {
                 )}
               </div>
 
-              {/* Active phase body */}
               <div className="px-5 py-4">
                 {allDone ? (
                   <div className="flex items-center gap-2 text-sm text-emerald-600">
@@ -223,7 +210,6 @@ export default async function DashboardPage() {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {/* Phase name + due date */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-0.5">
@@ -252,7 +238,6 @@ export default async function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Deliverables */}
                     {currentPhase.deliverables.length > 0 && (
                       <div className="rounded-lg border border-border/50 overflow-hidden">
                         {currentPhase.deliverables.map((d, i) => {
@@ -292,7 +277,6 @@ export default async function DashboardPage() {
           );
         })}
 
-        {/* ── Needs attention ── */}
         {revisionDeliverables.length > 0 && (
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-3">
@@ -324,7 +308,6 @@ export default async function DashboardPage() {
           </section>
         )}
 
-        {/* ── Recent conversations ── */}
         {recentPings.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -337,8 +320,8 @@ export default async function DashboardPage() {
             </div>
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               {recentPings.map((ping) => {
-                const lastMsg   = ping.messages[0];
-                const other     = ping.participants.find((p) => p.user.id !== user.id);
+                const lastMsg = ping.messages[0];
+                const other   = ping.participants.find((p) => p.user.id !== user.id);
                 const name =
                   ping.type === "DIRECT" ? (other?.user.name ?? "Direct Message") :
                   ping.type === "GROUP"  ? (ping.title ?? "Group") :
@@ -379,16 +362,25 @@ export default async function DashboardPage() {
             </div>
           </section>
         )}
-
       </div>
     );
   }
 
   // ── INSTRUCTOR / ADMIN VIEW ─────────────────────────────────────────────────
 
-  const { openTasks, completedToday, activeProjects, memberCount, pendingReviews } = stats;
+  const { activeProjects, pendingReviews, overdueTaskCount } = stats;
 
   const atRiskProjects = projects.filter((p) => p.health === "AT_RISK" || p.health === "BEHIND");
+
+  const activePhaseSummary = unlockedPhases
+    .filter((p) => p.status !== "COMPLETED")
+    .map((p) => ({
+      projectName: p.project.name,
+      phaseName:   p.name,
+      submitted:      p.deliverables.filter((d) => ["SUBMITTED", "UNDER_REVIEW", "APPROVED"].includes(d.status)).length,
+      revisionNeeded: p.deliverables.filter((d) => d.status === "REVISION_NEEDED").length,
+      notSubmitted:   p.deliverables.filter((d) => d.status === "NOT_SUBMITTED").length,
+    }));
 
   const briefingInput = {
     userName:           user.name.split(" ")[0] ?? user.name,
@@ -404,124 +396,93 @@ export default async function DashboardPage() {
     isAdminView:        true,
     activeProjects,
     activeProjectNames: projects.map((p) => p.name),
-    memberCount,
-    completedToday,
     pendingReviews,
+    overdueTaskCount,
+    activePhaseSummary,
   };
 
-  // Activity feed: exclude raw messages (conversations section covers that)
   const orgActivity = activityItems
     .filter((i) => i.kind !== "message_sent")
-    .slice(0, 15);
+    .slice(0, 8);
+
+  const kpiCards = [
+    {
+      label: "Pending Reviews",
+      value: pendingReviews,
+      href:  "/projects",
+      Icon:  CheckSquare,
+      accent: pendingReviews > 0 ? "#d97706" : "#9ca3af",
+    },
+    {
+      label: "Overdue Tasks",
+      value: overdueTaskCount,
+      href:  "/tasks",
+      Icon:  Clock,
+      accent: overdueTaskCount > 0 ? "#dc2626" : "#9ca3af",
+    },
+    {
+      label: "Unread Messages",
+      value: unreadPingCount,
+      href:  "/inbox",
+      Icon:  MessageSquare,
+      accent: "#7c3aed",
+    },
+    {
+      label: "Active Projects",
+      value: activeProjects,
+      href:  "/projects",
+      Icon:  FolderKanban,
+      accent: "#2563eb",
+    },
+  ] as const;
 
   return (
     <div className="space-y-8 pb-16">
-      {/* Greeting */}
+
+      {/* ── Greeting ── */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+        <p className="text-xs text-muted-foreground">
+          {format(now, "EEEE, MMMM d")} · {data.orgName}
+        </p>
+        <h1 className="text-lg font-semibold text-foreground mt-0.5">
           {getGreeting(user.name)}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Here&apos;s what&apos;s happening across your organisation.
-        </p>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {([
-          { label: "Active Projects",   value: activeProjects, Icon: FolderKanban,  bg: "bg-blue-50",    color: "text-blue-600"    },
-          { label: "Team Members",      value: memberCount,    Icon: Users,         bg: "bg-violet-50",  color: "text-violet-600"  },
-          { label: "Open Tasks",        value: openTasks,      Icon: CheckSquare,   bg: "bg-amber-50",   color: "text-amber-600"   },
-          { label: "Completed Today",   value: completedToday, Icon: CheckCheck,    bg: "bg-emerald-50", color: "text-emerald-600" },
-        ] as const).map(({ label, value, Icon, bg, color }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-5">
-            <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center mb-3", bg)}>
-              <Icon className={cn("w-4.5 h-4.5", color)} />
+      {/* ── KPI cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpiCards.map(({ label, value, href, Icon, accent }) => (
+          <Link
+            key={label}
+            href={href}
+            className="group relative bg-card rounded-xl border border-border p-5 overflow-hidden hover:border-foreground/20 transition-colors"
+          >
+            <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: accent }} />
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center mb-4"
+              style={{ backgroundColor: `${accent}18` }}
+            >
+              <Icon className="w-4 h-4" style={{ color: accent }} />
             </div>
             <p className="text-2xl font-bold text-foreground tabular-nums leading-none">{value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{label}</p>
-          </div>
+            <p className="text-xs text-muted-foreground mt-1.5 font-medium">{label}</p>
+          </Link>
         ))}
       </div>
 
-      {/* AI Briefing */}
-      <AIBriefingCard input={briefingInput} />
-
-      {/* Needs attention */}
-      {atRiskProjects.length > 0 && (
-        <section>
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-3">
-            Needs Attention
-          </h2>
-          <div className="space-y-2">
-            {atRiskProjects.map((project) => {
-              const pct      = project._count.tasks > 0
-                ? Math.round((project.completedTaskCount / project._count.tasks) * 100)
-                : 0;
-              const daysLeft = project.targetDate
-                ? differenceInDays(new Date(project.targetDate), now)
-                : null;
-              const isBehind = project.health === "BEHIND";
-              return (
-                <Link
-                  key={project.id}
-                  href={`/projects/${project.id}`}
-                  className="flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3.5 hover:bg-muted/40 transition-colors group"
-                >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                    isBehind ? "bg-red-100" : "bg-amber-100"
-                  )}>
-                    <AlertTriangle className={cn("w-4 h-4", isBehind ? "text-red-600" : "text-amber-600")} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                      {project.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full transition-all", isBehind ? "bg-red-500" : "bg-amber-500")}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0 tabular-nums">{pct}%</span>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <span className={cn(
-                      "text-xs font-medium px-2 py-0.5 rounded-md border",
-                      isBehind
-                        ? "bg-red-50 text-red-600 border-red-200"
-                        : "bg-amber-50 text-amber-600 border-amber-200"
-                    )}>
-                      {isBehind ? "Behind" : "At risk"}
-                    </span>
-                    {daysLeft !== null && (
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Active projects */}
+      {/* ── Active Projects — primary section ── */}
       {projects.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Active Projects
-            </h2>
-            <Link href="/projects" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+            <h2 className="text-sm font-semibold text-foreground">Active Projects</h2>
+            <Link
+              href="/projects"
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+            >
               All projects <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {projects.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
@@ -529,80 +490,93 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Org activity feed */}
-      {orgActivity.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Recent Activity
-            </h2>
-            <Link href="/activity" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-              All activity <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="rounded-xl border border-border bg-card divide-y divide-border/50 overflow-hidden">
-            {orgActivity.map((item) => (
-              <ActivityRow key={item.id} item={item} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── AI Briefing ── */}
+      <AIBriefingCard input={briefingInput} />
 
-      {/* Recent conversations */}
-      {recentPings.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-              Conversations
-            </h2>
-            <Link href="/inbox" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-              All <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            {recentPings.slice(0, 4).map((ping) => {
-              const lastMsg = ping.messages[0];
-              const other   = ping.participants.find((p) => p.user.id !== user.id);
-              const name =
-                ping.type === "DIRECT" ? (other?.user.name ?? "Direct Message") :
-                ping.type === "GROUP"  ? (ping.title ?? "Group") :
-                ping.task?.title ?? ping.project?.name ?? "Conversation";
-              const me       = ping.participants.find((p) => p.user.id === user.id) as { lastReadAt?: Date | null } | undefined;
-              const isUnread = !!lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
-              return (
-                <Link
-                  key={ping.id}
-                  href={`/inbox/${ping.id}`}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors"
-                >
-                  <div className="relative shrink-0">
-                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                      {name[0]?.toUpperCase()}
+      {/* ── Conversations + Activity ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        {recentPings.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-foreground">Conversations</h2>
+              <Link href="/inbox" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                All <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              {recentPings.slice(0, 4).map((ping) => {
+                const lastMsg = ping.messages[0];
+                const other   = ping.participants.find((p) => p.user.id !== user.id);
+                const name =
+                  ping.type === "DIRECT" ? (other?.user.name ?? "Direct Message") :
+                  ping.type === "GROUP"  ? (ping.title ?? "Group") :
+                  ping.task?.title ?? ping.project?.name ?? "Conversation";
+                const me       = ping.participants.find((p) => p.user.id === user.id) as { lastReadAt?: Date | null } | undefined;
+                const isUnread = !!lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
+
+                return (
+                  <Link
+                    key={ping.id}
+                    href={`/inbox/${ping.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+                        {name[0]?.toUpperCase()}
+                      </div>
+                      {isUnread && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-card" />
+                      )}
                     </div>
-                    {isUnread && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-card" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm truncate", isUnread ? "font-semibold text-foreground" : "text-foreground")}>
-                      {name}
-                    </p>
-                    {lastMsg && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        <span className="font-medium">{lastMsg.author.name.split(" ")[0]}: </span>
-                        {lastMsg.body}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
-                    {formatDistanceToNow(new Date(ping.updatedAt), { addSuffix: false })}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                        <p className={cn(
+                          "text-sm truncate",
+                          isUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
+                        )}>
+                          {name}
+                        </p>
+                        <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
+                          {formatDistanceToNow(new Date(ping.updatedAt), { addSuffix: false })}
+                        </span>
+                      </div>
+                      {lastMsg && (
+                        <p className={cn(
+                          "text-xs truncate",
+                          isUnread ? "text-foreground/70" : "text-muted-foreground"
+                        )}>
+                          <span className={cn(isUnread && "font-medium")}>
+                            {lastMsg.author.name.split(" ")[0]}:
+                          </span>{" "}
+                          {lastMsg.body}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {orgActivity.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
+              <Link href="/activity" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                All <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="rounded-xl border border-border bg-card divide-y divide-border/50 overflow-hidden">
+              {orgActivity.map((item) => (
+                <ActivityRow key={item.id} item={item} />
+              ))}
+            </div>
+          </section>
+        )}
+
+      </div>
     </div>
   );
 }

@@ -106,8 +106,16 @@ export async function getDashboardData() {
       db.task.count({ where: { organizationId: org.id, status: "DONE", completedAt: { gte: todayStart } } }),
       db.project.count({ where: { organizationId: org.id, status: "ACTIVE" } }),
       db.task.count({ where: { organizationId: org.id, assigneeId: user.id, status: { notIn: ["DONE", "CANCELLED"] }, project: { status: "ACTIVE" } } }),
-      db.orgMembership.count({ where: { organizationId: org.id, user: { isPlaceholder: false } } }),
+      db.user.count({ where: { projectMembers: { some: { project: { organizationId: org.id, status: "ACTIVE" } } } } }),
       db.phaseDeliverable.count({ where: { status: "SUBMITTED", phase: { project: { organizationId: org.id } } } }),
+      db.task.count({
+        where: {
+          organizationId: org.id,
+          status: { notIn: ["DONE", "CANCELLED"] },
+          dueDate: { lt: todayStart },
+          project: { status: "ACTIVE" },
+        },
+      }),
     ]),
 
     // Unlocked phases — students only see phases in their assigned projects
@@ -186,7 +194,7 @@ export async function getDashboardData() {
     return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
   });
 
-  const [openTasks, completedToday, activeProjects, myOpenTasks, memberCount, pendingReviews] = stats;
+  const [openTasks, completedToday, activeProjects, myOpenTasks, memberCount, pendingReviews, overdueTaskCount] = stats;
 
   return {
     user,
@@ -197,7 +205,7 @@ export async function getDashboardData() {
     projects: enrichedProjects,
     recentPings,
     unreadPingCount,
-    stats: { openTasks, completedToday, activeProjects, myOpenTasks, memberCount, pendingReviews },
+    stats: { openTasks, completedToday, activeProjects, myOpenTasks, memberCount, pendingReviews, overdueTaskCount },
     // student
     unlockedPhases,
     allPhases,

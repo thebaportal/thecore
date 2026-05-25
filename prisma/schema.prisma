@@ -78,8 +78,22 @@ model User {
   createdTasks          Task[]               @relation("TaskCreator")
   taskComments          TaskComment[]
 
+  hiddenActivity        ActivityHide[]
+
   @@index([clerkUserId])
   @@index([email])
+}
+
+model ActivityHide {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  itemId         String
+  hiddenAt       DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, itemId])
+  @@index([userId, organizationId])
 }
 
 model OrgMembership {

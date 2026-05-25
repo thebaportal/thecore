@@ -693,54 +693,66 @@ export function LibraryView({
                       href={`/library?folder=${folder.id}`}
                       className={cn(
                         "block transition-all duration-200",
-                        dragOverFolderId === folder.id ? "scale-[1.02]" : "hover:-translate-y-0.5 hover:drop-shadow-lg"
+                        dragOverFolderId === folder.id ? "scale-[1.02]" : "hover:-translate-y-0.5"
                       )}
                     >
-                      {/* Folder tab */}
-                      <div className="h-4 w-2/5 ml-3 rounded-t-lg" style={{ backgroundColor: from }} />
-                      {/* Folder body */}
                       <div className={cn(
-                        "rounded-2xl rounded-tl-none overflow-hidden border",
-                        dragOverFolderId === folder.id ? "border-primary/60 shadow-xl" : "border-border/60"
+                        "relative bg-card rounded-xl border overflow-hidden transition-shadow",
+                        dragOverFolderId === folder.id
+                          ? "border-primary/50 shadow-lg"
+                          : "border-border/60 hover:shadow-md"
                       )}>
-                        <div className="h-24 relative overflow-hidden p-4 flex flex-col justify-end" style={{ background: `linear-gradient(145deg, ${from}, ${to})` }}>
-                          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "8px 8px" }} />
-                          <p className="text-sm font-bold text-white leading-tight line-clamp-2 relative z-10">{folder.name}</p>
-                          {dragOverFolderId === folder.id && (
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                              <span className="text-white text-sm font-bold tracking-wide">Drop here</span>
-                            </div>
-                          )}
+                        {/* Colored top accent bar */}
+                        <div className="h-1 w-full" style={{ backgroundColor: from }} />
+
+                        <div className="p-4">
+                          {/* Icon */}
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                            style={{ backgroundColor: `${from}18` }}
+                          >
+                            <Folder className="w-5 h-5" style={{ color: from }} />
+                          </div>
+
+                          {/* Name */}
+                          <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 mb-1">
+                            {folder.name}
+                          </p>
+
+                          {/* Count */}
+                          <p className="text-xs text-muted-foreground">{contentDesc}</p>
                         </div>
-                        <div className="px-4 py-2.5 bg-card flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">{contentDesc}</span>
-                          <span className="w-2 h-2 rounded-full opacity-50 shrink-0" style={{ backgroundColor: from }} />
-                        </div>
+
+                        {dragOverFolderId === folder.id && (
+                          <div className="absolute inset-0 bg-primary/10 border-2 border-primary/40 rounded-xl flex items-center justify-center">
+                            <span className="text-primary text-sm font-semibold">Drop here</span>
+                          </div>
+                        )}
                       </div>
                     </Link>
                   )}
                   {isAdmin && renamingId !== folder.id && (
-                    <div className={cn("absolute top-6 right-2 items-center gap-0.5 z-10", confirmDelete?.id === folder.id ? "flex" : "hidden group-hover:flex")}>
+                    <div className={cn("absolute top-3 right-3 items-center gap-0.5 z-10", confirmDelete?.id === folder.id ? "flex" : "hidden group-hover:flex")}>
                       <button
                         onClick={(e) => { e.preventDefault(); setRenamingId(folder.id); setRenameValue(folder.name); setConfirmDelete(null); }}
-                        className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-white/80 hover:text-white transition-colors"
+                        className="p-1.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm"
                       >
                         <Pencil className="w-3 h-3" />
                       </button>
                       {confirmDelete?.id === folder.id ? (
                         <>
-                          <span className="text-[11px] text-white/90 font-medium px-1">Delete?</span>
-                          <button onClick={(e) => { e.preventDefault(); setConfirmDelete(null); handleDeleteFolder(folder.id); }} className="p-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">
+                          <span className="text-[11px] text-destructive font-medium px-1">Delete?</span>
+                          <button onClick={(e) => { e.preventDefault(); setConfirmDelete(null); handleDeleteFolder(folder.id); }} className="p-1.5 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition-colors shadow-sm">
                             <Check className="w-3 h-3" />
                           </button>
-                          <button onClick={(e) => { e.preventDefault(); setConfirmDelete(null); }} className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-white/80 hover:text-white transition-colors">
+                          <button onClick={(e) => { e.preventDefault(); setConfirmDelete(null); }} className="p-1.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground transition-colors shadow-sm">
                             <X className="w-3 h-3" />
                           </button>
                         </>
                       ) : (
                         <button
                           onClick={(e) => { e.preventDefault(); setConfirmDelete({ type: "folder", id: folder.id }); }}
-                          className="p-1.5 rounded-lg bg-black/30 hover:bg-red-500 text-white/80 hover:text-white transition-colors"
+                          className="p-1.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors shadow-sm"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>

@@ -5,16 +5,26 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Home, FolderKanban, CheckSquare,
-  Activity, Users2, Settings, ChevronLeft, ChevronRight, BookOpen, LayoutTemplate, MessageCircle,
+  Activity, Users2, Settings, ChevronLeft, ChevronRight,
+  BookOpen, LayoutTemplate, MessageCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { UserButton } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
 
 const OrganizationSwitcher = dynamic(
   () => import("@clerk/nextjs").then((m) => ({ default: m.OrganizationSwitcher })),
   { ssr: false, loading: () => <div className="h-8 w-full rounded-lg bg-muted animate-pulse" /> }
 );
-import { cn } from "@/lib/utils";
+
+function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
+  if (collapsed) return <div className="my-1 border-t border-sidebar-border/50" />;
+  return (
+    <p className="px-2.5 pt-4 pb-1 text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/30 select-none">
+      {label}
+    </p>
+  );
+}
 
 function NavItem({
   href, label, icon: Icon, badge, collapsed, onClick,
@@ -99,34 +109,42 @@ export function Sidebar({
     )}>
       {Logo}
 
-      {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2 py-2 overflow-y-auto">
         {isStudent ? (
           <>
-            <NavItem href="/student-home" label="Home"     icon={Home}           collapsed={collapsed} onClick={onClose} />
+            <SectionLabel label="Work" collapsed={collapsed} />
+            <NavItem href="/student-home" label="Home" icon={Home} collapsed={collapsed} onClick={onClose} />
             {studentProjectId ? (
               <>
-                <NavItem href={`/projects/${studentProjectId}/phases`}  label="My Project" icon={FolderKanban}  collapsed={collapsed} onClick={onClose} />
-                <NavItem href={`/projects/${studentProjectId}/members`} label="Team"       icon={Users2}        collapsed={collapsed} onClick={onClose} />
+                <NavItem href={`/projects/${studentProjectId}/phases`}  label="My Project" icon={FolderKanban} collapsed={collapsed} onClick={onClose} />
+                <NavItem href={`/projects/${studentProjectId}/members`} label="Team"        icon={Users2}       collapsed={collapsed} onClick={onClose} />
               </>
             ) : (
               <NavItem href="/projects" label="Projects" icon={FolderKanban} collapsed={collapsed} onClick={onClose} />
             )}
-            <NavItem href="/tasks"   label="My Tasks" icon={CheckSquare}    collapsed={collapsed} badge={overdueTasks} onClick={onClose} />
-            <NavItem href="/inbox"   label="Inbox"    icon={MessageCircle}  collapsed={collapsed} badge={unreadPings} onClick={onClose} />
-            <NavItem href="/library" label="Library"  icon={BookOpen}       collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/tasks"   label="My Tasks" icon={CheckSquare}   collapsed={collapsed} badge={overdueTasks} onClick={onClose} />
+            <NavItem href="/inbox"   label="Inbox"    icon={MessageCircle} collapsed={collapsed} badge={unreadPings}  onClick={onClose} />
+            <SectionLabel label="Knowledge" collapsed={collapsed} />
+            <NavItem href="/library" label="Library"  icon={BookOpen}      collapsed={collapsed} onClick={onClose} />
           </>
         ) : (
           <>
-            <NavItem href="/dashboard"  label="Home"      icon={Home}           collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/projects"   label="Projects"  icon={FolderKanban}   collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/library"    label="Library"   icon={BookOpen}       collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/templates"  label="Templates" icon={LayoutTemplate} collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/tasks"      label="My Tasks"  icon={CheckSquare}    collapsed={collapsed} badge={overdueTasks} onClick={onClose} />
-            <NavItem href="/inbox"      label="Inbox"     icon={MessageCircle}  collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/activity"   label="Activity"  icon={Activity}       collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/team"       label="Team"      icon={Users2}         collapsed={collapsed} onClick={onClose} />
-            <NavItem href="/settings"   label="Settings"  icon={Settings}       collapsed={collapsed} onClick={onClose} />
+            <SectionLabel label="Work" collapsed={collapsed} />
+            <NavItem href="/dashboard" label="Home"      icon={Home}           collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/projects"  label="Projects"  icon={FolderKanban}   collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/tasks"     label="My Tasks"  icon={CheckSquare}    collapsed={collapsed} badge={overdueTasks} onClick={onClose} />
+            <NavItem href="/inbox"     label="Inbox"     icon={MessageCircle}  collapsed={collapsed} badge={unreadPings}  onClick={onClose} />
+
+            <SectionLabel label="Knowledge" collapsed={collapsed} />
+            <NavItem href="/library"   label="Library"   icon={BookOpen}       collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/templates" label="Templates"  icon={LayoutTemplate} collapsed={collapsed} onClick={onClose} />
+
+            <SectionLabel label="People" collapsed={collapsed} />
+            <NavItem href="/team"      label="Team"      icon={Users2}         collapsed={collapsed} onClick={onClose} />
+
+            <SectionLabel label="System" collapsed={collapsed} />
+            <NavItem href="/activity"  label="Activity"  icon={Activity}       collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/settings"  label="Settings"  icon={Settings}       collapsed={collapsed} onClick={onClose} />
           </>
         )}
       </nav>
@@ -154,7 +172,6 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="absolute -right-3 top-16 z-10 w-6 h-6 rounded-full bg-sidebar border border-sidebar-border shadow-sm flex items-center justify-center hover:bg-muted transition-colors"

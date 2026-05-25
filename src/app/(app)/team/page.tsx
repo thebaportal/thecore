@@ -5,11 +5,12 @@ import { TeamShell } from "@/components/team/team-shell";
 export const metadata: Metadata = { title: "Team" };
 
 export default async function TeamPage() {
-  const { orgName, projects, currentDbUserId } = await getTeamByProject();
+  const { orgName, people, projects, currentDbUserId } = await getTeamByProject();
 
   return (
     <TeamShell
       orgName={orgName}
+      people={people}
       projects={projects}
       currentDbUserId={currentDbUserId}
     />
