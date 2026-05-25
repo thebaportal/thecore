@@ -1,159 +1,412 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, Layers, MessageCircle, Sparkles } from "lucide-react";
+import {
+  ArrowRight, Zap, FolderKanban, MessageSquare,
+  Sparkles, FileText, Users, Activity,
+} from "lucide-react";
 
 const features = [
   {
-    icon: <Layers className="w-5 h-5" />,
-    title: "Structured delivery",
-    description:
-      "Phases, tasks, and deliverables give every project a clear shape — so teams know exactly what's due and when.",
+    Icon: FolderKanban,
+    title: "Structured project delivery",
+    description: "Phases, milestones, and deliverables give every project a clear shape. Teams always know what's due and what comes next.",
+    color: "#3b82f6",
   },
   {
-    icon: <MessageCircle className="w-5 h-5" />,
-    title: "Focused communication",
-    description:
-      "Direct messages, group chats, and context-linked conversations keep discussion tied to the work, not buried in email.",
+    Icon: MessageSquare,
+    title: "Communication in context",
+    description: "Direct messages, group threads, and project conversations — tied directly to the work. No more digging through email chains.",
+    color: "#8b5cf6",
   },
   {
-    icon: <Sparkles className="w-5 h-5" />,
-    title: "Intelligent oversight",
-    description:
-      "An AI briefing surfaces what needs attention each day. No dashboards to check — just a calm morning read.",
+    Icon: Sparkles,
+    title: "Start each day knowing what matters",
+    description: "A concise morning briefing on risks, priorities, and decisions that need attention — so you walk into every day with clarity, not confusion.",
+    color: "#06b6d4",
   },
-];
-
-const pillars = [
-  "Multi-project oversight from one place",
-  "Daily digests so nothing slips through",
-  "File library attached to each project",
-  "Role-based access for every team member",
+  {
+    Icon: FileText,
+    title: "Unified file library",
+    description: "Docs, designs, and deliverables — organized by project. Everything in one place, always findable.",
+    color: "#10b981",
+  },
+  {
+    Icon: Users,
+    title: "Role-based team access",
+    description: "Fine-grained permissions so every member sees exactly what they need — from contributors to executives.",
+    color: "#f59e0b",
+  },
+  {
+    Icon: Activity,
+    title: "Live activity feed",
+    description: "A real-time pulse of your organization. Task completions, submissions, messages — nothing slips through.",
+    color: "#ef4444",
+  },
 ];
 
 export default async function LandingPage() {
   const { userId } = await auth();
   if (userId) redirect("/dashboard");
 
+  const navBg = "oklch(0.168 0.022 264)";
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Nav */}
-      <header className="fixed top-0 inset-x-0 z-50 h-16 flex items-center justify-between px-6 md:px-12 bg-background/95 backdrop-blur-sm border-b border-border">
-        <span className="font-semibold text-base tracking-tight text-foreground">
-          The Core
-        </span>
-        <nav className="flex items-center gap-2">
+    <div className="min-h-screen flex flex-col">
+
+      {/* ── Nav ── */}
+      <header
+        className="fixed top-0 inset-x-0 z-50 h-16 flex items-center justify-between px-6 md:px-16 border-b border-white/8"
+        style={{ background: navBg }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center shrink-0">
+            <span className="text-[11px] font-black" style={{ color: navBg }}>TC</span>
+          </div>
+          <span className="font-semibold text-sm text-white tracking-tight">The Core</span>
+        </div>
+        <nav className="flex items-center gap-1">
           <Link
             href="/sign-in"
-            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
+            className="px-4 py-2 text-sm text-white/50 hover:text-white transition-colors rounded-lg"
           >
             Sign in
           </Link>
           <Link
             href="/sign-up"
-            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            className="px-4 py-2.5 text-sm font-semibold bg-white rounded-lg hover:bg-white/90 transition-colors"
+            style={{ color: navBg }}
           >
             Get started
           </Link>
         </nav>
       </header>
 
-      {/* Hero */}
-      <main
-        className="flex-1 flex flex-col items-center justify-center text-center px-6 pt-32 pb-28"
-        style={{ background: "oklch(0.168 0.022 264)" }}
+      {/* ── Hero ── */}
+      <section
+        className="relative flex flex-col items-center text-center px-6 pt-44 pb-0 overflow-hidden"
+        style={{ background: navBg }}
       >
-        <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-8">
-          Project management for education
-        </p>
-        <h1 className="text-4xl md:text-[3.75rem] font-bold text-white leading-[1.1] tracking-tight max-w-2xl mb-6">
-          Where great work
-          <br />
-          comes together.
-        </h1>
-        <p className="text-base md:text-lg text-white/60 max-w-lg mb-10 leading-relaxed">
-          The Core gives your team one calm, structured workspace — for projects,
-          communication, and everything in between.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Link
-            href="/sign-up"
-            className="w-full sm:w-auto px-8 py-3 bg-white text-[oklch(0.168_0.022_264)] font-semibold text-sm rounded-md hover:bg-white/90 transition-colors"
-          >
-            Get started free
-          </Link>
-          <Link
-            href="/sign-in"
-            className="w-full sm:w-auto px-8 py-3 border border-white/20 text-white/80 text-sm rounded-md hover:border-white/40 hover:text-white transition-colors"
-          >
-            Sign in to your workspace
-          </Link>
-        </div>
+        {/* Radial glow */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.25) 0%, transparent 70%)" }}
+        />
+        {/* Grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+          }}
+        />
 
-        {/* Pillars */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-3xl w-full">
-          {pillars.map((p) => (
-            <div key={p} className="flex items-start gap-2 text-left">
-              <CheckCircle className="w-4 h-4 text-white/30 mt-0.5 shrink-0" />
-              <span className="text-xs text-white/50 leading-relaxed">{p}</span>
+        <div className="relative z-10 w-full max-w-5xl">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 mb-8">
+            <Zap className="w-3 h-3 text-indigo-400" />
+            <span className="text-xs text-white/50 font-medium tracking-wide">
+              Built for teams that move fast
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-5xl md:text-[4.5rem] font-bold text-white leading-[1.04] tracking-tight mb-6">
+            One platform.<br />
+            <span
+              style={{
+                background: "linear-gradient(120deg, #93c5fd 0%, #a5b4fc 40%, #c4b5fd 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Every project.
+            </span>
+          </h1>
+
+          <p className="text-base md:text-lg text-white/45 max-w-xl mx-auto mb-10 leading-relaxed">
+            Every conversation, file, and task lives next to the work it belongs to.
+            One workspace where your team stops chasing context and starts delivering.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
+            <Link
+              href="/sign-up"
+              className="flex items-center gap-2 px-7 py-3.5 bg-white font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors shadow-lg"
+              style={{ color: navBg }}
+            >
+              Start for free <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/sign-in"
+              className="flex items-center gap-2 px-7 py-3.5 border border-white/12 text-white/60 text-sm rounded-xl hover:border-white/25 hover:text-white/80 transition-colors"
+            >
+              Sign in to your workspace
+            </Link>
+          </div>
+
+          {/* ── Product mockup ── */}
+          <div className="relative">
+            {/* Glow under the mockup */}
+            <div
+              className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-2/3 h-20 blur-3xl pointer-events-none"
+              style={{ background: "linear-gradient(90deg, rgba(59,130,246,0.4), rgba(139,92,246,0.4))" }}
+            />
+
+            <div
+              className="relative rounded-2xl border border-white/10 overflow-hidden"
+              style={{
+                background: "oklch(0.13 0.018 264)",
+                boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 32px 80px rgba(0,0,0,0.6)",
+              }}
+            >
+              {/* Browser bar */}
+              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-white/5 rounded-md px-14 py-1 text-[11px] text-white/20 select-none">
+                    thecore.app/dashboard
+                  </div>
+                </div>
+              </div>
+
+              {/* App interior */}
+              <div className="flex" style={{ minHeight: "300px" }}>
+                {/* Sidebar */}
+                <div className="w-44 border-r border-white/8 p-3 flex flex-col gap-0.5 shrink-0">
+                  <div className="flex items-center gap-2 px-2 py-2 mb-2">
+                    <div className="w-5 h-5 rounded-md bg-white/15 flex items-center justify-center">
+                      <span className="text-[8px] font-bold text-white/60">TC</span>
+                    </div>
+                    <span className="text-[11px] text-white/40 font-semibold">Apex Studio</span>
+                  </div>
+
+                  {/* Section: WORK */}
+                  <div className="px-2 py-1">
+                    <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20">Work</span>
+                  </div>
+                  {[
+                    { label: "Dashboard", active: true },
+                    { label: "Projects",  active: false },
+                    { label: "My Tasks",  active: false },
+                    { label: "Inbox",     active: false },
+                  ].map(item => (
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                      style={{ background: item.active ? "rgba(255,255,255,0.08)" : "transparent" }}
+                    >
+                      <div className="w-3 h-3 rounded-sm bg-white/15" />
+                      <span className={`text-[11px] font-medium ${item.active ? "text-white/90" : "text-white/30"}`}>
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+
+                  <div className="px-2 py-1 mt-2">
+                    <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20">Knowledge</span>
+                  </div>
+                  {["Library", "Templates"].map(label => (
+                    <div key={label} className="flex items-center gap-2 px-2 py-1.5 rounded-lg">
+                      <div className="w-3 h-3 rounded-sm bg-white/15" />
+                      <span className="text-[11px] font-medium text-white/30">{label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main */}
+                <div className="flex-1 p-4 overflow-hidden">
+                  {/* Greeting */}
+                  <div className="mb-4">
+                    <p className="text-[9px] text-white/25">Monday, May 25 · Apex Studio</p>
+                    <p className="text-sm font-semibold text-white/70 mt-0.5">Good morning, Jordan</p>
+                  </div>
+
+                  {/* KPI cards */}
+                  <div className="grid grid-cols-4 gap-2 mb-4">
+                    {[
+                      { label: "Pending Reviews", value: "4",  accent: "#d97706" },
+                      { label: "Overdue Tasks",   value: "2",  accent: "#dc2626" },
+                      { label: "Unread",          value: "11", accent: "#7c3aed" },
+                      { label: "Active Projects", value: "6",  accent: "#2563eb" },
+                    ].map(k => (
+                      <div
+                        key={k.label}
+                        className="rounded-lg border border-white/8 p-2.5 relative overflow-hidden"
+                        style={{ background: "rgba(255,255,255,0.04)" }}
+                      >
+                        <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: k.accent }} />
+                        <p className="text-base font-bold text-white/80 tabular-nums">{k.value}</p>
+                        <p className="text-[8px] text-white/30 mt-0.5 leading-tight">{k.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Projects */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {[
+                      { name: "Nova Platform",  color: "#3b82f6", pct: 72, phase: "Phase 3 of 5" },
+                      { name: "Atlas Launch",   color: "#8b5cf6", pct: 44, phase: "Phase 2 of 4" },
+                      { name: "Orbit CRM",      color: "#10b981", pct: 89, phase: "Phase 4 of 4" },
+                    ].map(p => (
+                      <div
+                        key={p.name}
+                        className="rounded-lg border border-white/8 p-2.5"
+                        style={{ background: "rgba(255,255,255,0.04)" }}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <div className="w-3.5 h-3.5 rounded" style={{ background: p.color + "35" }} />
+                          <span className="text-[10px] font-semibold text-white/65 truncate">{p.name}</span>
+                        </div>
+                        <p className="text-[8px] text-white/25 mb-1.5">{p.phase}</p>
+                        <div className="h-0.5 bg-white/8 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ background: p.color, width: `${p.pct}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* AI briefing */}
+                  <div
+                    className="rounded-lg border border-white/8 px-3 py-2.5 flex items-center gap-2"
+                    style={{ background: "rgba(255,255,255,0.03)" }}
+                  >
+                    <Sparkles className="w-3 h-3 shrink-0 text-indigo-400/60" />
+                    <div className="min-w-0">
+                      <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20 mr-2">AI Briefing</span>
+                      <span className="text-[10px] text-white/30">
+                        Nova Platform has 4 deliverables pending review · Atlas group is 2 days behind on Phase 2 submissions
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats bar ── */}
+      <div className="border-y border-border bg-card">
+        <div className="max-w-4xl mx-auto px-6 py-8 grid grid-cols-3 divide-x divide-border">
+          {[
+            { value: "All-in-one",   sub: "projects, tasks, files, and chat" },
+            { value: "Phase-based",  sub: "delivery structure for any workflow" },
+            { value: "AI-first",     sub: "intelligent briefings built right in" },
+          ].map(s => (
+            <div key={s.value} className="px-8 text-center">
+              <p className="text-lg font-bold text-foreground">{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
             </div>
           ))}
         </div>
-      </main>
+      </div>
 
-      {/* Features */}
-      <section className="bg-card border-t border-border py-24 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-xl font-semibold text-foreground text-center mb-4">
-            Built for how project teams actually work
-          </h2>
-          <p className="text-sm text-muted-foreground text-center mb-16 max-w-md mx-auto">
-            Simple enough that everyone uses it. Structured enough that nothing
-            falls through.
+      {/* ── Context differentiator ── */}
+      <section className="py-20 px-6 bg-background border-b border-border">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-6">
+            The difference
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {features.map((f) => (
-              <div key={f.title} className="space-y-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  {f.icon}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground text-sm mb-2">
-                    {f.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {f.description}
-                  </p>
-                </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight mb-4">
+            Work that stays in context.
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed mb-10">
+            Most tools scatter your work across tabs. The Core keeps everything connected —
+            messages belong to projects, files belong to phases, tasks belong to deliverables.
+            No more hunting. No more "where was that again?"
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+            {[
+              { label: "Conversations", sub: "tied to projects & tasks" },
+              { label: "Files",         sub: "organized by project" },
+              { label: "Tasks",         sub: "linked to phases" },
+              { label: "Deliverables",  sub: "tracked through review" },
+            ].map(item => (
+              <div key={item.label} className="rounded-xl border border-border p-4">
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{item.sub}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section className="border-t border-border py-20 px-6 text-center bg-background">
-        <h2 className="text-2xl font-bold text-foreground mb-4 tracking-tight">
-          Ready to bring your projects together?
-        </h2>
-        <p className="text-sm text-muted-foreground mb-8">
-          Set up in minutes. No credit card required.
-        </p>
-        <Link
-          href="/sign-up"
-          className="inline-flex px-8 py-3 bg-primary text-primary-foreground font-medium text-sm rounded-md hover:bg-primary/90 transition-colors"
-        >
-          Create your workspace
-        </Link>
+      {/* ── Features ── */}
+      <section className="py-24 px-6 bg-background">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
+              Everything your team needs
+            </h2>
+            <p className="text-muted-foreground max-w-md mx-auto text-sm leading-relaxed">
+              From project kickoff to final delivery — structured, connected, and intelligent.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map(({ Icon, title, description, color }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-border p-6 hover:border-foreground/20 transition-colors group"
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                  style={{ background: color + "15" }}
+                >
+                  <Icon className="w-5 h-5" style={{ color }} />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2 text-sm">{title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-6 px-6 md:px-12 flex items-center justify-between bg-card">
-        <span className="text-sm font-semibold text-foreground">The Core</span>
-        <span className="text-xs text-muted-foreground">
-          © 2025 The Core. All rights reserved.
-        </span>
+      {/* ── CTA ── */}
+      <section
+        className="relative py-24 px-6 text-center overflow-hidden"
+        style={{ background: navBg }}
+      >
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.2) 0%, transparent 70%)" }}
+        />
+        <div className="relative z-10 max-w-xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-4">
+            Stop chasing work across email,<br />chats, and spreadsheets.
+          </h2>
+          <p className="text-white/40 mb-8 text-sm">
+            Give your team one place to manage projects, communication, and delivery.
+            Set up in minutes.
+          </p>
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-white font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors shadow-lg"
+            style={{ color: navBg }}
+          >
+            Get started free <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-border py-6 px-6 md:px-16 flex items-center justify-between bg-card">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+            <span className="text-[9px] font-black text-primary-foreground">TC</span>
+          </div>
+          <span className="text-sm font-semibold text-foreground">The Core</span>
+        </div>
+        <span className="text-xs text-muted-foreground">© 2025 The Core. All rights reserved.</span>
       </footer>
+
     </div>
   );
 }
