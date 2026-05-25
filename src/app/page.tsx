@@ -3,53 +3,53 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight, Zap, FolderKanban, MessageSquare,
-  Sparkles, FileText, Users, Activity,
+  Sparkles, FileText, Users, Activity, CheckSquare,
 } from "lucide-react";
 
 const features = [
   {
     Icon: FolderKanban,
-    title: "Structured project delivery",
-    description: "Phases, milestones, and deliverables give every project a clear shape. Teams always know what's due and what comes next.",
+    title: "Phase-driven project delivery",
+    description: "Structure every project into phases with their own deliverables and timelines. Teams always know where they are and what comes next.",
     color: "#3b82f6",
   },
   {
-    Icon: MessageSquare,
-    title: "Communication in context",
-    description: "Direct messages, group threads, and project conversations — tied directly to the work. No more digging through email chains.",
-    color: "#8b5cf6",
-  },
-  {
-    Icon: Sparkles,
-    title: "Start each day knowing what matters",
-    description: "A concise morning briefing on risks, priorities, and decisions that need attention — so you walk into every day with clarity, not confusion.",
-    color: "#06b6d4",
-  },
-  {
-    Icon: FileText,
-    title: "Unified file library",
-    description: "Docs, designs, and deliverables — organized by project. Everything in one place, always findable.",
+    Icon: CheckSquare,
+    title: "Deliverables with built-in review",
+    description: "Teams submit work directly in the platform. Review, approve, or request revisions — the feedback loop is part of every project.",
     color: "#10b981",
   },
   {
-    Icon: Users,
-    title: "Role-based team access",
-    description: "Fine-grained permissions so every member sees exactly what they need — from contributors to executives.",
-    color: "#f59e0b",
+    Icon: MessageSquare,
+    title: "Every conversation in context",
+    description: "Messages belong to projects, tasks, and deliverables — not scattered across email. Discussion lives exactly where the work happens.",
+    color: "#8b5cf6",
   },
   {
     Icon: Activity,
-    title: "Live activity feed",
-    description: "A real-time pulse of your organization. Task completions, submissions, messages — nothing slips through.",
-    color: "#ef4444",
+    title: "Full project visibility",
+    description: "See every project's phase, health, and progress without asking for a status update. Problems surface before they become blockers.",
+    color: "#f59e0b",
+  },
+  {
+    Icon: FileText,
+    title: "Project-attached file library",
+    description: "Docs, designs, and deliverables organized by project and phase. Everything findable, always attached to the work it belongs to.",
+    color: "#06b6d4",
+  },
+  {
+    Icon: Users,
+    title: "Built for any team structure",
+    description: "From solo contributors to multi-team organizations — role-based access, shared workspaces, and visibility that scales with you.",
+    color: "#e879f9",
   },
 ];
+
+const BG = "oklch(0.168 0.022 264)";
 
 export default async function LandingPage() {
   const { userId } = await auth();
   if (userId) redirect("/dashboard");
-
-  const navBg = "oklch(0.168 0.022 264)";
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -57,26 +57,19 @@ export default async function LandingPage() {
       {/* ── Nav ── */}
       <header
         className="fixed top-0 inset-x-0 z-50 h-16 flex items-center justify-between px-6 md:px-16 border-b border-white/8"
-        style={{ background: navBg }}
+        style={{ background: BG }}
       >
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center shrink-0">
-            <span className="text-[11px] font-black" style={{ color: navBg }}>TC</span>
+            <span className="text-[11px] font-black" style={{ color: BG }}>TC</span>
           </div>
           <span className="font-semibold text-sm text-white tracking-tight">The Core</span>
         </div>
         <nav className="flex items-center gap-1">
-          <Link
-            href="/sign-in"
-            className="px-4 py-2 text-sm text-white/50 hover:text-white transition-colors rounded-lg"
-          >
+          <Link href="/sign-in" className="px-4 py-2 text-sm text-white/50 hover:text-white transition-colors rounded-lg">
             Sign in
           </Link>
-          <Link
-            href="/sign-up"
-            className="px-4 py-2.5 text-sm font-semibold bg-white rounded-lg hover:bg-white/90 transition-colors"
-            style={{ color: navBg }}
-          >
+          <Link href="/sign-up" className="px-4 py-2.5 text-sm font-semibold bg-white rounded-lg hover:bg-white/90 transition-colors" style={{ color: BG }}>
             Get started
           </Link>
         </nav>
@@ -84,62 +77,51 @@ export default async function LandingPage() {
 
       {/* ── Hero ── */}
       <section
-        className="relative flex flex-col items-center text-center px-6 pt-44 pb-0 overflow-hidden"
-        style={{ background: navBg }}
+        className="relative flex flex-col items-center text-center px-6 pt-36 pb-0 overflow-hidden"
+        style={{ background: BG }}
       >
         {/* Radial glow */}
-        <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none"
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.25) 0%, transparent 70%)" }}
         />
         {/* Grid */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-[0.04]"
-          style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "64px 64px" }}
         />
 
         <div className="relative z-10 w-full max-w-5xl">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 mb-8">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 mb-7">
             <Zap className="w-3 h-3 text-indigo-400" />
-            <span className="text-xs text-white/50 font-medium tracking-wide">
-              Built for teams that move fast
-            </span>
+            <span className="text-xs text-white/50 font-medium tracking-wide">Built for teams that deliver</span>
           </div>
 
           {/* Headline */}
-          <h1 className="text-5xl md:text-[4.5rem] font-bold text-white leading-[1.04] tracking-tight mb-6">
+          <h1 className="text-5xl md:text-[4.5rem] font-bold text-white leading-[1.04] tracking-tight mb-5">
             One platform.<br />
-            <span
-              style={{
-                background: "linear-gradient(120deg, #93c5fd 0%, #a5b4fc 40%, #c4b5fd 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
+            <span style={{
+              background: "linear-gradient(120deg, #93c5fd 0%, #a5b4fc 40%, #c4b5fd 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
               Every project.
             </span>
           </h1>
 
-          <p className="text-base md:text-lg text-white/45 max-w-xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base md:text-lg text-white/45 max-w-xl mx-auto mb-9 leading-relaxed">
             Every conversation, file, and task lives next to the work it belongs to.
             One workspace where your team stops chasing context and starts delivering.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-            <Link
-              href="/sign-up"
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
+            <Link href="/sign-up"
               className="flex items-center gap-2 px-7 py-3.5 bg-white font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors shadow-lg"
-              style={{ color: navBg }}
+              style={{ color: BG }}
             >
               Start for free <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link
-              href="/sign-in"
+            <Link href="/sign-in"
               className="flex items-center gap-2 px-7 py-3.5 border border-white/12 text-white/60 text-sm rounded-xl hover:border-white/25 hover:text-white/80 transition-colors"
             >
               Sign in to your workspace
@@ -148,18 +130,12 @@ export default async function LandingPage() {
 
           {/* ── Product mockup ── */}
           <div className="relative">
-            {/* Glow under the mockup */}
-            <div
-              className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-2/3 h-20 blur-3xl pointer-events-none"
+            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-2/3 h-20 blur-3xl pointer-events-none"
               style={{ background: "linear-gradient(90deg, rgba(59,130,246,0.4), rgba(139,92,246,0.4))" }}
             />
-
             <div
-              className="relative rounded-2xl border border-white/10 overflow-hidden"
-              style={{
-                background: "oklch(0.13 0.018 264)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 32px 80px rgba(0,0,0,0.6)",
-              }}
+              className="relative rounded-2xl border border-white/10 overflow-hidden text-left"
+              style={{ background: "oklch(0.13 0.018 264)", boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 32px 80px rgba(0,0,0,0.6)" }}
             >
               {/* Browser bar */}
               <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8">
@@ -176,7 +152,7 @@ export default async function LandingPage() {
               </div>
 
               {/* App interior */}
-              <div className="flex" style={{ minHeight: "300px" }}>
+              <div className="flex" style={{ minHeight: "280px" }}>
                 {/* Sidebar */}
                 <div className="w-44 border-r border-white/8 p-3 flex flex-col gap-0.5 shrink-0">
                   <div className="flex items-center gap-2 px-2 py-2 mb-2">
@@ -185,8 +161,6 @@ export default async function LandingPage() {
                     </div>
                     <span className="text-[11px] text-white/40 font-semibold">Apex Studio</span>
                   </div>
-
-                  {/* Section: WORK */}
                   <div className="px-2 py-1">
                     <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20">Work</span>
                   </div>
@@ -196,8 +170,7 @@ export default async function LandingPage() {
                     { label: "My Tasks",  active: false },
                     { label: "Inbox",     active: false },
                   ].map(item => (
-                    <div
-                      key={item.label}
+                    <div key={item.label}
                       className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
                       style={{ background: item.active ? "rgba(255,255,255,0.08)" : "transparent" }}
                     >
@@ -207,7 +180,6 @@ export default async function LandingPage() {
                       </span>
                     </div>
                   ))}
-
                   <div className="px-2 py-1 mt-2">
                     <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20">Knowledge</span>
                   </div>
@@ -221,7 +193,6 @@ export default async function LandingPage() {
 
                 {/* Main */}
                 <div className="flex-1 p-4 overflow-hidden">
-                  {/* Greeting */}
                   <div className="mb-4">
                     <p className="text-[9px] text-white/25">Monday, May 25 · Apex Studio</p>
                     <p className="text-sm font-semibold text-white/70 mt-0.5">Good morning, Jordan</p>
@@ -235,8 +206,7 @@ export default async function LandingPage() {
                       { label: "Unread",          value: "11", accent: "#7c3aed" },
                       { label: "Active Projects", value: "6",  accent: "#2563eb" },
                     ].map(k => (
-                      <div
-                        key={k.label}
+                      <div key={k.label}
                         className="rounded-lg border border-white/8 p-2.5 relative overflow-hidden"
                         style={{ background: "rgba(255,255,255,0.04)" }}
                       >
@@ -250,12 +220,11 @@ export default async function LandingPage() {
                   {/* Projects */}
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {[
-                      { name: "Nova Platform",  color: "#3b82f6", pct: 72, phase: "Phase 3 of 5" },
-                      { name: "Atlas Launch",   color: "#8b5cf6", pct: 44, phase: "Phase 2 of 4" },
-                      { name: "Orbit CRM",      color: "#10b981", pct: 89, phase: "Phase 4 of 4" },
+                      { name: "Nova Platform", color: "#3b82f6", pct: 72, phase: "Phase 3 of 5" },
+                      { name: "Atlas Launch",  color: "#8b5cf6", pct: 44, phase: "Phase 2 of 4" },
+                      { name: "Orbit CRM",     color: "#10b981", pct: 89, phase: "Phase 4 of 4" },
                     ].map(p => (
-                      <div
-                        key={p.name}
+                      <div key={p.name}
                         className="rounded-lg border border-white/8 p-2.5"
                         style={{ background: "rgba(255,255,255,0.04)" }}
                       >
@@ -271,16 +240,18 @@ export default async function LandingPage() {
                     ))}
                   </div>
 
-                  {/* AI briefing */}
+                  {/* Briefing strip */}
                   <div
                     className="rounded-lg border border-white/8 px-3 py-2.5 flex items-center gap-2"
                     style={{ background: "rgba(255,255,255,0.03)" }}
                   >
                     <Sparkles className="w-3 h-3 shrink-0 text-indigo-400/60" />
                     <div className="min-w-0">
-                      <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20 mr-2">AI Briefing</span>
+                      <span className="text-[8px] font-semibold uppercase tracking-widest text-white/20 mr-2">
+                        Daily Briefing
+                      </span>
                       <span className="text-[10px] text-white/30">
-                        Nova Platform has 4 deliverables pending review · Atlas group is 2 days behind on Phase 2 submissions
+                        Nova Platform has 4 deliverables pending review · Atlas group is 2 days behind on Phase 2
                       </span>
                     </div>
                   </div>
@@ -293,44 +264,40 @@ export default async function LandingPage() {
 
       {/* ── Stats bar ── */}
       <div className="border-y border-border bg-card">
-        <div className="max-w-4xl mx-auto px-6 py-8 grid grid-cols-3 divide-x divide-border">
+        <div className="max-w-4xl mx-auto px-6 py-6 grid grid-cols-3 divide-x divide-border">
           {[
-            { value: "All-in-one",   sub: "projects, tasks, files, and chat" },
-            { value: "Phase-based",  sub: "delivery structure for any workflow" },
-            { value: "AI-first",     sub: "intelligent briefings built right in" },
+            { value: "All-in-one",            sub: "projects, tasks, files, and conversations" },
+            { value: "Built Around Delivery",  sub: "phases, deliverables, and reviews built in" },
+            { value: "Phases to Done",         sub: "structured execution for every project" },
           ].map(s => (
-            <div key={s.value} className="px-8 text-center">
-              <p className="text-lg font-bold text-foreground">{s.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+            <div key={s.value} className="px-6 text-center">
+              <p className="text-sm font-bold text-foreground">{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{s.sub}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Context differentiator ── */}
-      <section className="py-20 px-6 bg-background border-b border-border">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-6">
-            The difference
-          </p>
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight mb-4">
+      {/* ── "Work that stays in context" — dark, prominent ── */}
+      <section className="py-16 px-6 md:px-16" style={{ background: BG }}>
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-4">
             Work that stays in context.
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed mb-10">
-            Most tools scatter your work across tabs. The Core keeps everything connected —
-            messages belong to projects, files belong to phases, tasks belong to deliverables.
-            No more hunting. No more "where was that again?"
+          <p className="text-white/40 max-w-xl mb-10 text-sm md:text-base leading-relaxed">
+            Most tools scatter your work across tabs and threads. The Core keeps
+            everything connected — so your team stops hunting for context and starts executing.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Conversations", sub: "tied to projects & tasks" },
-              { label: "Files",         sub: "organized by project" },
-              { label: "Tasks",         sub: "linked to phases" },
-              { label: "Deliverables",  sub: "tracked through review" },
+              { label: "Messages",  sub: "live inside projects" },
+              { label: "Files",     sub: "attached to phases" },
+              { label: "Tasks",     sub: "linked to deliverables" },
+              { label: "Decisions", sub: "tied to context" },
             ].map(item => (
-              <div key={item.label} className="rounded-xl border border-border p-4">
-                <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{item.sub}</p>
+              <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <p className="text-sm font-semibold text-white/80">{item.label}</p>
+                <p className="text-xs text-white/35 mt-0.5">{item.sub}</p>
               </div>
             ))}
           </div>
@@ -338,30 +305,26 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section className="py-24 px-6 bg-background">
+      <section className="py-16 px-6 bg-background">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-              Everything your team needs
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight mb-3">
+              Built around delivery
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto text-sm leading-relaxed">
-              From project kickoff to final delivery — structured, connected, and intelligent.
+              From kickoff to final review — The Core gives every project a structure that moves work forward.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map(({ Icon, title, description, color }) => (
-              <div
-                key={title}
-                className="rounded-xl border border-border p-6 hover:border-foreground/20 transition-colors group"
-              >
+              <div key={title} className="rounded-xl border border-border p-5 hover:border-foreground/20 transition-colors">
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center mb-3.5"
                   style={{ background: color + "15" }}
                 >
                   <Icon className="w-5 h-5" style={{ color }} />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2 text-sm">{title}</h3>
+                <h3 className="font-semibold text-foreground mb-1.5 text-sm">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
               </div>
             ))}
@@ -370,12 +333,8 @@ export default async function LandingPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section
-        className="relative py-24 px-6 text-center overflow-hidden"
-        style={{ background: navBg }}
-      >
-        <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
+      <section className="relative py-20 px-6 text-center overflow-hidden" style={{ background: BG }}>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.2) 0%, transparent 70%)" }}
         />
         <div className="relative z-10 max-w-xl mx-auto">
@@ -386,10 +345,9 @@ export default async function LandingPage() {
             Give your team one place to manage projects, communication, and delivery.
             Set up in minutes.
           </p>
-          <Link
-            href="/sign-up"
+          <Link href="/sign-up"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-white font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors shadow-lg"
-            style={{ color: navBg }}
+            style={{ color: BG }}
           >
             Get started free <ArrowRight className="w-4 h-4" />
           </Link>
