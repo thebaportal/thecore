@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
@@ -59,15 +60,17 @@ export default async function BasecampImportPage() {
         </p>
       </div>
 
-      <BasecampImporter
-        connected={!!token && !!accountId}
-        token={token}
-        accountId={accountId}
-        accountName={accountName}
-        connectHref={connectHref}
-        storageConfigured={!!process.env["UPLOADTHING_TOKEN"]}
-        onClearPings={deleteImportedPings}
-      />
+      <Suspense>
+        <BasecampImporter
+          connected={!!token && !!accountId}
+          token={token}
+          accountId={accountId}
+          accountName={accountName}
+          connectHref={connectHref}
+          storageConfigured={!!process.env["UPLOADTHING_TOKEN"]}
+          onClearPings={deleteImportedPings}
+        />
+      </Suspense>
     </div>
   );
 }
