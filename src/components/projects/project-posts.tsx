@@ -2,12 +2,13 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Pin, Trash2, Plus, Loader2, Pencil, Copy, Check } from "lucide-react";
+import { Pin, Trash2, Plus, Loader2, Pencil, Copy, Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { createProjectPost, updateProjectPost, togglePinPost, deleteProjectPost } from "@/actions/posts";
+import type { PostCategory } from "@/lib/post-categories";
 import { UserAvatar } from "@/components/users/user-avatar";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,8 @@ type Post = {
   title: string;
   body: string;
   pinnedAt: Date | null;
+  category: string | null;
+  instructorOnly: boolean;
   createdAt: Date;
   author: { id: string; name: string; avatarUrl: string | null };
   replies: Reply[];
@@ -52,47 +55,68 @@ function renderWithLinks(text: string) {
   );
 }
 
+function CategoryBadge({ category, emoji }: { category: string; emoji?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-[10px] font-medium text-muted-foreground shrink-0">
+      {emoji && <span>{emoji}</span>}
+      {category}
+    </span>
+  );
+}
+
 export function ProjectPosts({
   projectId,
   initialPosts,
   isInstructor,
   currentUserId,
   currentUserAvatarUrl,
+  categories,
 }: {
   projectId: string;
   initialPosts: Post[];
   isInstructor: boolean;
   currentUserId: string;
   currentUserAvatarUrl: string | null;
+  categories: PostCategory[];
 }) {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", body: "" });
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", body: "", category: "", instructorOnly: false });
   const [isPending, startTransition] = useTransition();
   const [createError, setCreateError] = useState<string | null>(null);
 
-  // Edit state
   const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", body: "" });
+  const [editForm, setEditForm] = useState({ title: "", body: "", category: "", instructorOnly: false });
   const [editError, setEditError] = useState<string | null>(null);
 
-  // Pin state — separate transition so it doesn't collide
   const [isPinPending, startPinTransition] = useTransition();
   const [pinError, setPinError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setPosts(initialPosts);
-  }, [initialPosts]);
+  useEffect(() => { setPosts(initialPosts); }, [initialPosts]);
+
+  const categoryMap = new Map(categories.map((c) => [c.name, c.emoji]));
+
+  const usedCategories = [...new Set(posts.map((p) => p.category).filter(Boolean) as string[])];
+
+  const filtered = activeFilter ? posts.filter((p) => p.category === activeFilter) : posts;
+  const pinned   = filtered.filter((p) => p.pinnedAt);
+  const unpinned = filtered.filter((p) => !p.pinnedAt);
 
   function handleCreate() {
     if (!form.title.trim()) return;
     setCreateError(null);
     startTransition(async () => {
       try {
-        await createProjectPost(projectId, { title: form.title.trim(), body: form.body.trim() });
-        setForm({ title: "", body: "" });
+        await createProjectPost(projectId, {
+          title: form.title.trim(),
+          body: form.body.trim(),
+          category: form.category || null,
+          instructorOnly: form.instructorOnly,
+        });
+        setForm({ title: "", body: "", category: "", instructorOnly: false });
         setOpen(false);
         router.refresh();
       } catch (e) {
@@ -103,7 +127,7 @@ export function ProjectPosts({
 
   function handleEditOpen(post: Post) {
     setEditingPost(post);
-    setEditForm({ title: post.title, body: post.body });
+    setEditForm({ title: post.title, body: post.body, category: post.category ?? "", instructorOnly: post.instructorOnly });
     setEditError(null);
   }
 
@@ -112,7 +136,12 @@ export function ProjectPosts({
     setEditError(null);
     startTransition(async () => {
       try {
-        await updateProjectPost(editingPost.id, { title: editForm.title.trim(), body: editForm.body.trim() });
+        await updateProjectPost(editingPost.id, {
+          title: editForm.title.trim(),
+          body: editForm.body.trim(),
+          category: editForm.category || null,
+          instructorOnly: editForm.instructorOnly,
+        });
         setEditingPost(null);
         router.refresh();
       } catch (e) {
@@ -140,24 +169,56 @@ export function ProjectPosts({
     });
   }
 
-  const pinned   = posts.filter((p) => p.pinnedAt);
-  const unpinned = posts.filter((p) => !p.pinnedAt);
-
   return (
     <div className="max-w-2xl pb-16 space-y-6">
 
-      {/* Header row — everyone can post */}
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New Post
-        </Button>
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-3">
+        {/* Category filter strip */}
+        {usedCategories.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setActiveFilter(null)}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
+                !activeFilter
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted",
+              )}
+            >
+              All
+            </button>
+            {usedCategories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
+                  activeFilter === cat
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                {categoryMap.get(cat) && <span className="mr-1">{categoryMap.get(cat)}</span>}
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="ml-auto shrink-0">
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            New Post
+          </Button>
+        </div>
       </div>
 
       {/* Empty state */}
-      {posts.length === 0 && (
+      {filtered.length === 0 && (
         <div className="rounded-xl border border-dashed border-border py-12 text-center">
-          <p className="text-sm text-muted-foreground/40">No posts yet.</p>
+          <p className="text-sm text-muted-foreground/40">
+            {activeFilter ? `No posts in "${activeFilter}".` : "No posts yet."}
+          </p>
         </div>
       )}
 
@@ -171,6 +232,7 @@ export function ProjectPosts({
             <PostCard
               key={post.id}
               post={post}
+              categoryEmoji={post.category ? categoryMap.get(post.category) : undefined}
               expanded={expanded === post.id}
               onToggle={() => setExpanded(expanded === post.id ? null : post.id)}
               isInstructor={isInstructor}
@@ -186,18 +248,17 @@ export function ProjectPosts({
         </div>
       )}
 
-      {/* All posts */}
+      {/* Unpinned */}
       {unpinned.length > 0 && (
         <div className="space-y-3">
           {pinned.length > 0 && (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-              Recent
-            </p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">Recent</p>
           )}
           {unpinned.map((post) => (
             <PostCard
               key={post.id}
               post={post}
+              categoryEmoji={post.category ? categoryMap.get(post.category) : undefined}
               expanded={expanded === post.id}
               onToggle={() => setExpanded(expanded === post.id ? null : post.id)}
               isInstructor={isInstructor}
@@ -238,6 +299,52 @@ export function ProjectPosts({
                 className="text-sm resize-none"
               />
             </div>
+            {categories.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Category</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, category: "" }))}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors",
+                      !form.category
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20",
+                    )}
+                  >
+                    None
+                  </button>
+                  {categories.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, category: c.name }))}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors",
+                        form.category === c.name
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20",
+                      )}
+                    >
+                      {c.emoji} {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {isInstructor && (
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.instructorOnly}
+                  onChange={(e) => setForm((f) => ({ ...f, instructorOnly: e.target.checked }))}
+                  className="rounded border-border"
+                />
+                <span className="text-sm text-foreground">Instructor only</span>
+                <span className="text-xs text-muted-foreground">— hidden from students</span>
+              </label>
+            )}
           </div>
           <DialogFooter>
             {createError && <p className="text-xs text-destructive mr-auto self-center">{createError}</p>}
@@ -273,6 +380,52 @@ export function ProjectPosts({
                 className="text-sm resize-none"
               />
             </div>
+            {categories.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Category</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setEditForm((f) => ({ ...f, category: "" }))}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors",
+                      !editForm.category
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20",
+                    )}
+                  >
+                    None
+                  </button>
+                  {categories.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setEditForm((f) => ({ ...f, category: c.name }))}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors",
+                        editForm.category === c.name
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20",
+                      )}
+                    >
+                      {c.emoji} {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {isInstructor && (
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={editForm.instructorOnly}
+                  onChange={(e) => setEditForm((f) => ({ ...f, instructorOnly: e.target.checked }))}
+                  className="rounded border-border"
+                />
+                <span className="text-sm text-foreground">Instructor only</span>
+                <span className="text-xs text-muted-foreground">— hidden from students</span>
+              </label>
+            )}
           </div>
           <DialogFooter>
             {editError && <p className="text-xs text-destructive mr-auto self-center">{editError}</p>}
@@ -290,6 +443,7 @@ export function ProjectPosts({
 
 function PostCard({
   post,
+  categoryEmoji,
   expanded,
   onToggle,
   isInstructor,
@@ -302,6 +456,7 @@ function PostCard({
   pinError,
 }: {
   post: Post;
+  categoryEmoji: string | undefined;
   expanded: boolean;
   onToggle: () => void;
   isInstructor: boolean;
@@ -330,9 +485,8 @@ function PostCard({
   return (
     <div className={cn(
       "rounded-xl border bg-card overflow-hidden transition-colors",
-      pinned ? "border-primary/20" : "border-border"
+      pinned ? "border-primary/20" : "border-border",
     )}>
-      {/* Post header — clickable to expand */}
       <button
         onClick={onToggle}
         className="w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-muted/30 transition-colors"
@@ -348,7 +502,18 @@ function PostCard({
           />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground leading-snug">{post.title}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-foreground leading-snug">{post.title}</p>
+            {post.category && (
+              <CategoryBadge category={post.category} emoji={categoryEmoji} />
+            )}
+            {post.instructorOnly && isInstructor && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/30 text-[10px] font-medium text-amber-600 dark:text-amber-400 shrink-0">
+                <Lock className="w-2.5 h-2.5" />
+                Instructor only
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {post.author.name} · {fmt(post.createdAt)}
             {post.replies.length > 0 && (
@@ -366,7 +531,6 @@ function PostCard({
         </span>
       </button>
 
-      {/* Expanded body */}
       {expanded && (
         <div className="border-t border-border/40">
           <div className="px-5 pt-4 pb-3">
@@ -377,7 +541,6 @@ function PostCard({
             </p>
           </div>
 
-          {/* Reply cards */}
           {post.replies.length > 0 && (
             <div className="border-t border-border/40 bg-muted/20 divide-y divide-border/40">
               {post.replies.map((reply) => (
@@ -412,7 +575,7 @@ function PostCard({
                   onClick={onPin}
                   className={cn(
                     "flex items-center gap-1.5 text-xs transition-colors",
-                    pinned ? "text-primary hover:text-primary/70" : "text-muted-foreground hover:text-foreground"
+                    pinned ? "text-primary hover:text-primary/70" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Pin className="h-3 w-3" />

@@ -229,17 +229,25 @@ export async function importProjectToTemplates(projectId: string, targetFolderId
     for (const f of toProcess) {
       if (f.parentId && !folderIdMap.has(f.parentId)) { deferred.push(f); continue; }
       const newParentId = f.parentId ? (folderIdMap.get(f.parentId) ?? null) : (targetFolderId ?? null);
-      const newFolder = await db.docFolder.create({
-        data: {
-          id: crypto.randomUUID(),
-          organizationId: org.id,
-          projectId: null,
-          isTemplate: true,
-          name: f.name,
-          parentId: newParentId,
-        },
+      const existing = await db.docFolder.findFirst({
+        where: { organizationId: org.id, isTemplate: true, parentId: newParentId, name: f.name },
+        select: { id: true },
       });
-      folderIdMap.set(f.id, newFolder.id);
+      if (existing) {
+        folderIdMap.set(f.id, existing.id);
+      } else {
+        const newFolder = await db.docFolder.create({
+          data: {
+            id: crypto.randomUUID(),
+            organizationId: org.id,
+            projectId: null,
+            isTemplate: true,
+            name: f.name,
+            parentId: newParentId,
+          },
+        });
+        folderIdMap.set(f.id, newFolder.id);
+      }
     }
     toProcess.splice(0, toProcess.length, ...deferred);
   }

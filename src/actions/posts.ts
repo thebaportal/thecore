@@ -3,6 +3,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { DEFAULT_POST_CATEGORIES, type PostCategory } from "@/lib/post-categories";
+export type { PostCategory } from "@/lib/post-categories";
 
 async function getOrgAndUser() {
   const { userId, orgId } = await auth();
@@ -26,8 +28,12 @@ async function requireInstructor(orgId: string, userId: string) {
 export async function getProjectPosts(projectId: string) {
   const ctx = await getOrgAndUser();
   if (!ctx) return [];
+  const isInstructor = await requireInstructor(ctx.org.id, ctx.user.id);
   return db.projectPost.findMany({
-    where: { projectId },
+    where: {
+      projectId,
+      ...(isInstructor ? {} : { instructorOnly: false }),
+    },
     include: {
       author: { select: { id: true, name: true, avatarUrl: true } },
       replies: {
@@ -39,17 +45,29 @@ export async function getProjectPosts(projectId: string) {
   });
 }
 
-export async function createProjectPost(projectId: string, data: { title: string; body: string }) {
+export async function createProjectPost(
+  projectId: string,
+  data: { title: string; body: string; category?: string | null; instructorOnly?: boolean },
+) {
   const ctx = await getOrgAndUser();
   if (!ctx) throw new Error("Unauthenticated");
-
   await db.projectPost.create({
-    data: { projectId, authorId: ctx.user.id, title: data.title, body: data.body },
+    data: {
+      projectId,
+      authorId: ctx.user.id,
+      title: data.title,
+      body: data.body,
+      category: data.category ?? null,
+      instructorOnly: data.instructorOnly ?? false,
+    },
   });
   revalidatePath(`/projects/${projectId}/posts`);
 }
 
-export async function updateProjectPost(postId: string, data: { title: string; body: string }) {
+export async function updateProjectPost(
+  postId: string,
+  data: { title: string; body: string; category?: string | null; instructorOnly?: boolean },
+) {
   const ctx = await getOrgAndUser();
   if (!ctx) throw new Error("Unauthenticated");
 
@@ -63,7 +81,15 @@ export async function updateProjectPost(postId: string, data: { title: string; b
   const isInstructor = await requireInstructor(ctx.org.id, ctx.user.id);
   if (!isAuthor && !isInstructor) throw new Error("Forbidden");
 
-  await db.projectPost.update({ where: { id: postId }, data });
+  await db.projectPost.update({
+    where: { id: postId },
+    data: {
+      title: data.title,
+      body: data.body,
+      category: data.category ?? null,
+      ...(isInstructor ? { instructorOnly: data.instructorOnly ?? false } : {}),
+    },
+  });
   revalidatePath(`/projects/${post.projectId}/posts`);
 }
 
@@ -99,4 +125,29 @@ export async function deleteProjectPost(projectId: string, postId: string) {
 
   await db.projectPost.delete({ where: { id: postId } });
   revalidatePath(`/projects/${projectId}/posts`);
+}
+
+// ─── Post categories ──────────────────────────────────────────────────────────
+
+export async function getOrgPostCategories(): Promise<PostCategory[]> {
+  const ctx = await getOrgAndUser();
+  if (!ctx) return DEFAULT_POST_CATEGORIES;
+  const org = await db.organization.findUnique({
+    where: { id: ctx.org.id },
+    select: { postCategories: true },
+  });
+  if (!org?.postCategories) return DEFAULT_POST_CATEGORIES;
+  return org.postCategories as PostCategory[];
+}
+
+export async function updateOrgPostCategories(categories: PostCategory[]) {
+  const ctx = await getOrgAndUser();
+  if (!ctx) throw new Error("Unauthenticated");
+  const ok = await requireInstructor(ctx.org.id, ctx.user.id);
+  if (!ok) throw new Error("Forbidden");
+  await db.organization.update({
+    where: { id: ctx.org.id },
+    data: { postCategories: categories },
+  });
+  revalidatePath("/settings/organization");
 }

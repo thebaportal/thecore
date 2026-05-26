@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { AppShell } from "@/components/layout/app-shell";
@@ -45,19 +45,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     });
   }
 
-  // Upsert org membership — handles the case where the member record wasn't created via webhook
-  const dbOrg = await db.organization.findUnique({
+  // Resolve org — lazy-create if webhook hasn't fired yet
+  let dbOrg = await db.organization.findUnique({
     where: { clerkOrgId: orgId },
     select: { id: true },
   });
 
-  if (dbOrg) {
-    await db.orgMembership.upsert({
-      where: { organizationId_userId: { organizationId: dbOrg.id, userId: dbUser.id } },
-      create: { organizationId: dbOrg.id, userId: dbUser.id, role: clerkRoleToDb(orgRole) },
-      update: {},
+  if (!dbOrg) {
+    const clerkOrg = await (await clerkClient()).organizations.getOrganization({ organizationId: orgId });
+    dbOrg = await db.organization.create({
+      data: {
+        clerkOrgId: orgId,
+        name: clerkOrg.name,
+        slug: clerkOrg.slug ?? orgId,
+        logoUrl: clerkOrg.imageUrl ?? null,
+      },
+      select: { id: true },
     });
   }
+
+  await db.orgMembership.upsert({
+    where: { organizationId_userId: { organizationId: dbOrg.id, userId: dbUser.id } },
+    create: { organizationId: dbOrg.id, userId: dbUser.id, role: clerkRoleToDb(orgRole) },
+    update: {},
+  });
 
   const isStudent = orgRole === "org:member";
   let studentProjectId: string | null = null;

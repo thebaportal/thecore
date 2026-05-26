@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, ChevronDown, Trash2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, ChevronDown, Trash2, Loader2, CalendarDays } from "lucide-react";
 import { PhaseGuidanceEditor } from "@/components/phases/phase-guidance-editor";
 import { PhaseTitleEditor } from "@/components/phases/phase-title-editor";
 import { PhaseFooterControls, AddDeliverableForm } from "@/components/phases/phase-controls";
 import { DeliverableCard, DeliverableCardData } from "@/components/phases/deliverable-card";
-import { deletePhase } from "@/actions/phases";
+import { deletePhase, updatePhase } from "@/actions/phases";
 import { cn } from "@/lib/utils";
 
 function PhaseDeleteButton({ phaseId }: { phaseId: string }) {
@@ -48,12 +49,44 @@ const DOT_CLS = {
   NOT_STARTED: "border border-border bg-background",
 } as const;
 
+function PhaseDueDateEditor({ phaseId, dueDate }: { phaseId: string; dueDate: Date | string | null }) {
+  const router = useRouter();
+  const [value, setValue] = useState(
+    dueDate ? new Date(dueDate as string | Date).toISOString().split("T")[0]! : ""
+  );
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value;
+    setValue(next);
+    startTransition(async () => {
+      await updatePhase(phaseId, { dueDate: next ? new Date(next) : null });
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+      <CalendarDays className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+      <input
+        type="date"
+        value={value}
+        onChange={handleChange}
+        disabled={isPending}
+        title="Phase due date"
+        className="bg-transparent outline-none text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 w-[90px]"
+      />
+    </div>
+  );
+}
+
 type Phase = {
   id: string;
   order: number;
   name: string;
   status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
   startedAt: Date | string | null;
+  dueDate: Date | string | null;
   guidance: string | null;
   deliverables: DeliverableCardData[];
 };
@@ -117,6 +150,14 @@ export function PhaseList({
                     Started {new Date(phase.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </p>
                 )}
+                {isInstructor
+                  ? <PhaseDueDateEditor phaseId={phase.id} dueDate={phase.dueDate} />
+                  : phase.dueDate
+                    ? <p className="text-xs text-muted-foreground">
+                        Due {new Date(phase.dueDate as string | Date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    : null
+                }
                 {isInstructor && <PhaseDeleteButton phaseId={phase.id} />}
                 <ChevronDown className={cn("w-4 h-4 text-muted-foreground/40 transition-transform duration-200", isCollapsed && "-rotate-90")} />
               </div>

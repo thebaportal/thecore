@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowRight, Zap, FolderKanban, MessageSquare,
+  ArrowRight, FolderKanban, MessageSquare,
   Sparkles, FileText, Users, Activity, CheckSquare,
 } from "lucide-react";
 
@@ -80,27 +80,30 @@ export default async function LandingPage() {
         className="relative flex flex-col items-center text-center px-6 pt-36 pb-0 overflow-hidden"
         style={{ background: BG }}
       >
-        {/* Radial glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.25) 0%, transparent 70%)" }}
+        {/* Glow layers */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[640px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 50% -5%, rgba(99,102,241,0.42) 0%, rgba(99,102,241,0.1) 45%, transparent 70%)" }}
+        />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[260px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(192,132,252,0.28) 0%, transparent 60%)" }}
         />
         {/* Grid */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        <div className="absolute inset-0 pointer-events-none opacity-[0.035]"
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "64px 64px" }}
         />
 
         <div className="relative z-10 w-full max-w-5xl">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 mb-7">
-            <Zap className="w-3 h-3 text-indigo-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 mb-8">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span className="text-xs text-white/50 font-medium tracking-wide">Built for teams that deliver</span>
           </div>
 
           {/* Headline */}
-          <h1 className="text-5xl md:text-[4.5rem] font-bold text-white leading-[1.04] tracking-tight mb-5">
+          <h1 className="text-[3.25rem] sm:text-[5rem] md:text-[6.75rem] font-extrabold text-white leading-[0.9] tracking-[-0.035em] mb-7">
             One platform.<br />
             <span style={{
-              background: "linear-gradient(120deg, #93c5fd 0%, #a5b4fc 40%, #c4b5fd 100%)",
+              background: "linear-gradient(125deg, #93c5fd 0%, #a78bfa 40%, #e879f9 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -109,33 +112,37 @@ export default async function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-base md:text-lg text-white/45 max-w-xl mx-auto mb-9 leading-relaxed">
-            Every conversation, file, and task lives next to the work it belongs to.
-            One workspace where your team stops chasing context and starts delivering.
+          <p className="text-base md:text-lg text-white/40 max-w-md mx-auto mb-9 leading-relaxed">
+            Projects, tasks, files, and conversations — structured around delivery,
+            not scattered across tools.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
             <Link href="/sign-up"
-              className="flex items-center gap-2 px-7 py-3.5 bg-white font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors shadow-lg"
+              className="flex items-center gap-2 px-7 py-3.5 bg-white font-semibold text-sm rounded-xl hover:bg-white/90 transition-colors"
               style={{ color: BG }}
             >
               Start for free <ArrowRight className="w-4 h-4" />
             </Link>
             <Link href="/sign-in"
-              className="flex items-center gap-2 px-7 py-3.5 border border-white/12 text-white/60 text-sm rounded-xl hover:border-white/25 hover:text-white/80 transition-colors"
+              className="px-7 py-3.5 border border-white/10 text-white/45 text-sm rounded-xl hover:border-white/20 hover:text-white/65 transition-colors"
             >
-              Sign in to your workspace
+              Sign in
             </Link>
           </div>
 
           {/* ── Product mockup ── */}
           <div className="relative">
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-2/3 h-20 blur-3xl pointer-events-none"
-              style={{ background: "linear-gradient(90deg, rgba(59,130,246,0.4), rgba(139,92,246,0.4))" }}
+            {/* Bottom fade into next section */}
+            <div className="absolute inset-x-0 bottom-0 h-48 z-10 pointer-events-none"
+              style={{ background: `linear-gradient(to bottom, transparent 0%, ${BG} 100%)` }}
+            />
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-2/3 h-28 blur-3xl pointer-events-none opacity-60"
+              style={{ background: "linear-gradient(90deg, rgba(59,130,246,0.5), rgba(139,92,246,0.5))" }}
             />
             <div
               className="relative rounded-2xl border border-white/10 overflow-hidden text-left"
-              style={{ background: "oklch(0.13 0.018 264)", boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 32px 80px rgba(0,0,0,0.6)" }}
+              style={{ background: "oklch(0.13 0.018 264)", boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 40px 100px rgba(0,0,0,0.7), 0 0 60px rgba(99,102,241,0.12)" }}
             >
               {/* Browser bar */}
               <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8">

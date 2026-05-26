@@ -50,6 +50,7 @@ export default async function ProjectPhasesPage({
           name: p.name,
           status: p.status,
           startedAt: p.startedAt,
+          dueDate: p.dueDate,
           guidance: p.guidance,
           deliverables: p.deliverables,
         }))}

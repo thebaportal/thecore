@@ -29,6 +29,7 @@ export type BriefingInput = {
     submitted: number;
     revisionNeeded: number;
     notSubmitted: number;
+    daysLeft: number | null;
   }[];
 };
 
@@ -53,9 +54,14 @@ export async function getDailyBriefing(input: BriefingInput): Promise<string> {
     if (input.pendingReviews) lines.push(`Deliverables awaiting instructor review: ${input.pendingReviews}`);
     if (input.overdueTaskCount) lines.push(`Overdue tasks (across all groups): ${input.overdueTaskCount}`);
     if (input.activePhaseSummary && input.activePhaseSummary.length > 0) {
-      const phaseLines = input.activePhaseSummary.map((p) =>
-        `${p.projectName} — Phase: ${p.phaseName} (${p.submitted} submitted, ${p.revisionNeeded} need revision, ${p.notSubmitted} not yet submitted)`
-      );
+      const phaseLines = input.activePhaseSummary.map((p) => {
+        const deadline = p.daysLeft === null
+          ? ""
+          : p.daysLeft < 0
+            ? `, ${Math.abs(p.daysLeft)}d overdue`
+            : `, due in ${p.daysLeft}d`;
+        return `${p.projectName} — Phase: ${p.phaseName} (${p.submitted} submitted, ${p.revisionNeeded} need revision, ${p.notSubmitted} not yet submitted${deadline})`;
+      });
       lines.push(`Current phase progress:\n${phaseLines.join("\n")}`);
     }
     if (input.atRiskProjects.length > 0) {

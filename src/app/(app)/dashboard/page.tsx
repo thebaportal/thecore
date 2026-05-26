@@ -380,6 +380,7 @@ export default async function DashboardPage() {
       submitted:      p.deliverables.filter((d) => ["SUBMITTED", "UNDER_REVIEW", "APPROVED"].includes(d.status)).length,
       revisionNeeded: p.deliverables.filter((d) => d.status === "REVISION_NEEDED").length,
       notSubmitted:   p.deliverables.filter((d) => d.status === "NOT_SUBMITTED").length,
+      daysLeft:       p.dueDate ? differenceInDays(new Date(p.dueDate), now) : null,
     }));
 
   const briefingInput = {

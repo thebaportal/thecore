@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getProject } from "@/actions/projects";
-import { getProjectPosts } from "@/actions/posts";
+import { getProjectPosts, getOrgPostCategories } from "@/actions/posts";
 import { ProjectPosts } from "@/components/projects/project-posts";
 import { db } from "@/lib/db";
 
@@ -13,10 +13,11 @@ export default async function ProjectPostsPage({
   const { projectId } = await params;
   const { userId, orgId } = await auth();
 
-  const [project, posts, clerkUser] = await Promise.all([
+  const [project, posts, clerkUser, categories] = await Promise.all([
     getProject(projectId),
     getProjectPosts(projectId),
     currentUser(),
+    getOrgPostCategories(),
   ]);
   if (!project) notFound();
 
@@ -45,6 +46,7 @@ export default async function ProjectPostsPage({
       isInstructor={isInstructor}
       currentUserId={currentUserId}
       currentUserAvatarUrl={clerkUser?.imageUrl ?? null}
+      categories={categories}
     />
   );
 }

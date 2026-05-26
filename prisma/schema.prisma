@@ -23,6 +23,7 @@ model Organization {
   basecampRefreshToken String?
   libraryNote          String?
   templatesNote        String?
+  postCategories       Json?
   basecampPeople       BasecampPerson[]
   docs                 Doc[]
   folders              DocFolder[]
@@ -585,17 +586,19 @@ model Notification {
 }
 
 model ProjectPost {
-  id        String             @id @default(cuid())
-  projectId String
-  authorId  String
-  title     String
-  body      String
-  pinnedAt  DateTime?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  author    User               @relation(fields: [authorId], references: [id])
-  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  replies   ProjectPostReply[]
+  id             String             @id @default(cuid())
+  projectId      String
+  authorId       String
+  title          String
+  body           String
+  pinnedAt       DateTime?
+  category       String?
+  instructorOnly Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  author         User               @relation(fields: [authorId], references: [id])
+  project        Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  replies        ProjectPostReply[]
 
   @@index([projectId])
   @@index([authorId])
