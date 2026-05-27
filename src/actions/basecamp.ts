@@ -33,11 +33,23 @@ async function getBasecampCredentials(): Promise<{ token: string; accountId: str
 
 // ── Basecamp fetch helpers ────────────────────────────────────────────────────
 
+// Retries up to 3 times on 429, honouring Retry-After when present.
+async function bcFetchRaw(url: string, token: string): Promise<Response> {
+  const opts = { headers: { Authorization: `Bearer ${token}`, "User-Agent": BC_UA } };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, opts);
+    if (res.status !== 429) return res;
+    const after = parseInt(res.headers.get("Retry-After") ?? "10", 10);
+    const delay = isNaN(after) ? Math.min(10_000 * (attempt + 1), 30_000) : after * 1_000;
+    console.log(`[BC] 429 on ${url.slice(0, 80)} — retrying in ${delay}ms (attempt ${attempt + 1})`);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  return fetch(url, opts);
+}
+
 async function bcFetch<T>(path: string, token: string, accountId: string): Promise<T> {
   const url = `https://3.basecampapi.com/${accountId}${path}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "User-Agent": BC_UA },
-  });
+  const res = await bcFetchRaw(url, token);
   if (!res.ok) throw new Error(`Basecamp API error: ${res.status} ${url}`);
   return res.json() as Promise<T>;
 }
@@ -46,9 +58,7 @@ async function bcFetchAll<T>(path: string, token: string, accountId: string): Pr
   const results: T[] = [];
   let nextUrl: string | null = `https://3.basecampapi.com/${accountId}${path}`;
   while (nextUrl) {
-    const res: Response = await fetch(nextUrl, {
-      headers: { Authorization: `Bearer ${token}`, "User-Agent": BC_UA },
-    });
+    const res = await bcFetchRaw(nextUrl, token);
     if (!res.ok) throw new Error(`Basecamp API error: ${res.status} ${nextUrl}`);
     results.push(...(await res.json() as T[]));
     const link = res.headers.get("Link") ?? "";
@@ -61,9 +71,7 @@ async function bcFetchFullUrl<T>(fullUrl: string, token: string): Promise<T[]> {
   const results: T[] = [];
   let nextUrl: string | null = fullUrl;
   while (nextUrl) {
-    const res: Response = await fetch(nextUrl, {
-      headers: { Authorization: `Bearer ${token}`, "User-Agent": BC_UA },
-    });
+    const res = await bcFetchRaw(nextUrl, token);
     if (!res.ok) throw new Error(`Basecamp API error: ${res.status} ${nextUrl}`);
     results.push(...(await res.json() as T[]));
     const link = res.headers.get("Link") ?? "";
@@ -376,6 +384,11 @@ export type ImportStatus =
   | "IMPORT_FAILED"
   | "LEGACY_IMPORT";
 
+// Files larger than this are skipped during import — the server can't buffer them reliably.
+// Override via BASECAMP_MAX_FILE_MB env var (e.g. "512" for 512 MB).
+const MAX_IMPORT_FILE_BYTES =
+  parseInt(process.env["BASECAMP_MAX_FILE_MB"] ?? "200", 10) * 1024 * 1024;
+
 // Stored in BasecampImportLog.failedFiles — enough info to retry without re-fetching the BC list.
 export type FailedFile = {
   uploadId: number;
@@ -388,6 +401,7 @@ export type FailedFile = {
   createdAt: string;
   reason: string;
   is404: boolean;
+  isOversized?: boolean;
 };
 
 export type ProjectImportLog = {
@@ -413,19 +427,18 @@ export type BCProjectWithStatus = {
   importLog: ProjectImportLog | null;
 };
 
-// Deterministic: phases drive critical failures, non-⚠ errors drive partial, ⚠-only = warnings.
+// Deterministic: phases drive critical failures, retryable item errors drive warnings,
+// ⚠-only soft errors (404s, oversized, vault notes) = fully imported.
 function calculateImportStatus(phases: PhaseResult[], errors: string[]): ImportStatus {
-  // IMPORT_FAILED: couldn't create the project record at all
   const projectPhase = phases.find((p) => p.phase === "Project" || p.phase === "Project fetch");
   if (projectPhase?.status === "error") return "IMPORT_FAILED";
 
-  // PARTIALLY_IMPORTED: an entire content phase (Tasks / Messages / Files) collapsed
   const phaseErrors = phases.filter((p) => p.status === "error");
   if (phaseErrors.length > 0) return "PARTIALLY_IMPORTED";
 
-  // IMPORTED_WITH_WARNINGS: individual items failed (specific files, specific tasks)
-  // — the project is usable, not broken
-  if (errors.length > 0) return "IMPORTED_WITH_WARNINGS";
+  // Only retryable errors (not ⚠-prefixed) elevate to IMPORTED_WITH_WARNINGS.
+  const retryable = errors.filter((e) => !e.startsWith("⚠"));
+  if (retryable.length > 0) return "IMPORTED_WITH_WARNINGS";
 
   return "IMPORTED";
 }
@@ -475,9 +488,22 @@ export async function getBasecampProjects(): Promise<BCProjectWithStatus[]> {
     const log      = logMap.get(dbId) ?? null;
 
     let importStatus: ImportStatus;
-    if (!inDb)     importStatus = "NOT_IMPORTED";
-    else if (!log) importStatus = "LEGACY_IMPORT";
-    else           importStatus = log.status as ImportStatus;
+    if (!inDb) {
+      importStatus = "NOT_IMPORTED";
+    } else if (!log) {
+      // In DB but no import log: if the project has content it was imported by an older version
+      // of the app that didn't write logs. If it has no content the import started but never
+      // completed (e.g. timed out) — treat as NOT_IMPORTED so it appears in "Ready to Import".
+      const hasContent =
+        (taskMap.get(dbId)   ?? 0) +
+        (fileMap.get(dbId)   ?? 0) +
+        (pingMap.get(dbId)   ?? 0) +
+        (postMap.get(dbId)   ?? 0) +
+        (folderMap.get(dbId) ?? 0) > 0;
+      importStatus = hasContent ? "LEGACY_IMPORT" : "NOT_IMPORTED";
+    } else {
+      importStatus = log.status as ImportStatus;
+    }
 
     const importLog: ProjectImportLog | null = log
       ? {
@@ -955,6 +981,21 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
                   return;
                 }
 
+                // Skip files too large to buffer in a serverless function.
+                if (upload.byte_size > MAX_IMPORT_FILE_BYTES) {
+                  const mb = Math.round(upload.byte_size / 1024 / 1024);
+                  const reason = `File is ${mb} MB — too large to import via server. Download it manually from Basecamp.`;
+                  console.warn(`[BC Import] SKIPPING OVERSIZED: "${upload.filename}" (${mb} MB)`);
+                  errors.push(`⚠ "${upload.filename}": ${reason}`);
+                  failedFilesList.push({
+                    uploadId: upload.id, bcProjectId, dbProjectId: project.id,
+                    dbFolderId: upload.dbFolderId, filename: upload.filename,
+                    contentType: upload.content_type, byteSize: upload.byte_size,
+                    createdAt: upload.created_at, reason, is404: false, isOversized: true,
+                  });
+                  return;
+                }
+
                 try {
                   const stored = await downloadAndStore(upload, token, utapi);
                   if (existing) {
@@ -1122,6 +1163,12 @@ export async function retryFailedFiles(dbProjectId: string): Promise<RetryResult
   const utapi = new UTApi();
 
   for (const failed of toRetry) {
+    // Oversized files can't be imported via server — keep them in the failed list as-is.
+    if (failed.isOversized) {
+      stillFailed.push(failed);
+      continue;
+    }
+
     const fileId = `bc-upload-${failed.uploadId}`;
     try {
       // Reconstruct a minimal UploadWithFolder. Rebuild the standard Basecamp
@@ -1177,10 +1224,11 @@ export async function retryFailedFiles(dbProjectId: string): Promise<RetryResult
   const phaseErrors = logRow.phaseErrors as { phase: string; error: string }[];
   const hasPhaseErrors = phaseErrors.length > 0;
   let newStatus: ImportStatus;
-  if (stillFailed.length === 0 && !hasPhaseErrors)          newStatus = "IMPORTED";
-  else if (stillFailed.length === 0 && hasPhaseErrors)      newStatus = "PARTIALLY_IMPORTED";
-  else if (stillFailed.every((f) => f.is404) && !hasPhaseErrors) newStatus = "IMPORTED_WITH_WARNINGS";
-  else                                                       newStatus = "PARTIALLY_IMPORTED";
+  const unfixable = (f: FailedFile) => f.is404 || !!f.isOversized;
+  if (stillFailed.length === 0 && !hasPhaseErrors)               newStatus = "IMPORTED";
+  else if (stillFailed.length === 0 && hasPhaseErrors)           newStatus = "PARTIALLY_IMPORTED";
+  else if (stillFailed.every(unfixable) && !hasPhaseErrors)      newStatus = "IMPORTED_WITH_WARNINGS";
+  else                                                            newStatus = "PARTIALLY_IMPORTED";
 
   const newFilesCount = (logRow.filesCount as number) + succeeded;
 

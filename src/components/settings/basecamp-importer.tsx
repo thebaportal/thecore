@@ -41,6 +41,21 @@ type RunStatus =
   | { state: "done"; result: ImportResult }
   | { state: "error"; message: string };
 
+// ── Plain-English error translator ───────────────────────────────────────────
+
+function humanizePhaseError(raw: string): string {
+  if (raw.includes("429")) return "Basecamp rate limit reached. Re-import in a few minutes.";
+  if (raw.includes("401") || raw.includes("403")) return "Basecamp authorization error. Reconnect and try again.";
+  if (raw.includes("404")) return "Content not found — may have been deleted in Basecamp.";
+  if (/50[0-9]/.test(raw)) return "Basecamp server error. Try again later.";
+  // Strip URLs and boilerplate prefix for anything else
+  return raw
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/^Error:\s*/i, "")
+    .replace(/Basecamp API error:\s*\d+\s*/g, "")
+    .trim() || "Unexpected error — try re-importing.";
+}
+
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<ImportStatus, { label: string; cls: string; dot: string }> = {
@@ -52,13 +67,18 @@ const STATUS_META: Record<ImportStatus, { label: string; cls: string; dot: strin
   LEGACY_IMPORT:           { label: "Legacy Import",              cls: "bg-slate-100 text-slate-600",             dot: "bg-slate-400"        },
 };
 
-function StatusBadge({ status }: { status: ImportStatus }) {
+function StatusBadge({ status, failedFilesCount }: { status: ImportStatus; failedFilesCount?: number }) {
   if (status === "NOT_IMPORTED") return null;
   const m = STATUS_META[status];
+  // When every file imported fine, "warnings" were just minor vault notes — use softer language.
+  const label =
+    status === "IMPORTED_WITH_WARNINGS" && failedFilesCount === 0
+      ? "Imported, minor notes"
+      : m.label;
   return (
     <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0", m.cls)}>
       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", m.dot)} />
-      {m.label}
+      {label}
     </span>
   );
 }
@@ -83,9 +103,10 @@ function runStatusIcon(s: RunStatus) {
   if (s.state === "error")   return <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />;
   if (s.state === "pending") return <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />;
   if (s.state === "done") {
-    const st = s.result.importStatus;
+    const st  = s.result.importStatus;
+    const ffc = s.result.importLog.failedFilesCount;
     if (st === "IMPORT_FAILED" || st === "PARTIALLY_IMPORTED") return <XCircle className="w-4 h-4 text-red-500 shrink-0" />;
-    if (st === "IMPORTED_WITH_WARNINGS") return <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />;
+    if (st === "IMPORTED_WITH_WARNINGS" && ffc > 0) return <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />;
     return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />;
   }
   return null;
@@ -119,8 +140,9 @@ function ProjectDetail({
 
   if (!log) return null;
 
-  const retryableFiles = log.failedFiles.filter((f) => !f.is404);
-  const notFoundFiles  = log.failedFiles.filter((f) => f.is404);
+  const oversizedFiles  = log.failedFiles.filter((f) => f.isOversized);
+  const notFoundFiles   = log.failedFiles.filter((f) => f.is404);
+  const retryableFiles  = log.failedFiles.filter((f) => !f.is404 && !f.isOversized);
 
   return (
     <div className="px-4 pb-3 pt-0 pl-11 space-y-3">
@@ -133,32 +155,64 @@ function ProjectDetail({
         <span>{log.filesCount} files stored</span>
         <span>·</span>
         <span>{log.foldersCount} folders</span>
-        {log.failedFilesCount > 0 && (
+        {oversizedFiles.length > 0 && (
           <>
             <span>·</span>
-            <span className="text-amber-600 font-medium">{log.failedFilesCount} files failed</span>
+            <span className="text-amber-600 font-medium">{oversizedFiles.length} large file{oversizedFiles.length > 1 ? "s" : ""} skipped</span>
+          </>
+        )}
+        {retryableFiles.length > 0 && (
+          <>
+            <span>·</span>
+            <span className="text-red-600 font-medium">{retryableFiles.length} file{retryableFiles.length > 1 ? "s" : ""} failed</span>
           </>
         )}
       </div>
 
-      {/* Phase errors */}
+      {/* Phase errors — translated to plain language */}
       {log.phaseErrors.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {log.phaseErrors.map((pe) => (
-            <div key={pe.phase} className="flex items-start gap-1.5">
-              <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-700"><span className="font-medium">{pe.phase}:</span> {pe.error}</p>
+            <div key={pe.phase} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-amber-900">{pe.phase} did not complete</p>
+                <p className="text-xs text-amber-800">{humanizePhaseError(pe.error)}</p>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Failed files */}
-      {log.failedFiles.length > 0 && (
+      {/* Oversized files — friendly, not alarming */}
+      {oversizedFiles.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 overflow-hidden">
+          <div className="px-3 py-1.5 bg-amber-100/60 flex items-center gap-1.5">
+            <SkipForward className="w-3 h-3 text-amber-600" />
+            <span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wide">
+              Large files skipped ({oversizedFiles.length})
+            </span>
+          </div>
+          <div className="divide-y divide-amber-100 max-h-32 overflow-y-auto">
+            {oversizedFiles.map((f: FailedFile, i: number) => (
+              <div key={i} className="flex items-start gap-2 px-3 py-2">
+                <SkipForward className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{f.filename}</p>
+                  <p className="text-xs text-amber-700">{Math.round(f.byteSize / 1024 / 1024)} MB — download manually from Basecamp</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Failed files (actual errors, retryable) */}
+      {(retryableFiles.length > 0 || notFoundFiles.length > 0) && (
         <div className="rounded-lg border border-border overflow-hidden">
           <div className="px-3 py-1.5 bg-muted/30 flex items-center justify-between">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-              Failed Files ({log.failedFiles.length})
+              Failed Files ({retryableFiles.length + notFoundFiles.length})
             </span>
             {retryableFiles.length > 0 && (
               <Button
@@ -175,7 +229,7 @@ function ProjectDetail({
             )}
           </div>
           <div className="divide-y divide-border max-h-48 overflow-y-auto">
-            {log.failedFiles.map((f: FailedFile, i: number) => (
+            {[...retryableFiles, ...notFoundFiles].map((f: FailedFile, i: number) => (
               <div key={i} className="flex items-start gap-2 px-3 py-2">
                 {f.is404
                   ? <FileX className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -207,6 +261,8 @@ function ProjectDetail({
 
 // ── Project row ───────────────────────────────────────────────────────────────
 
+const ATTENTION_STATUSES_SET = new Set<ImportStatus>(["LEGACY_IMPORT", "PARTIALLY_IMPORTED", "IMPORT_FAILED"]);
+
 function ProjectRow({
   project,
   runStatus,
@@ -217,6 +273,7 @@ function ProjectRow({
   onToggle,
   onExpandToggle,
   onRetry,
+  onReimport,
 }: {
   project: BCProjectWithStatus;
   runStatus: RunStatus | undefined;
@@ -227,6 +284,7 @@ function ProjectRow({
   onToggle: () => void;
   onExpandToggle: () => void;
   onRetry: () => void;
+  onReimport: () => void;
 }) {
   const isImported = project.importStatus !== "NOT_IMPORTED";
   const hasDetail  = isImported && !runStatus;
@@ -255,7 +313,7 @@ function ProjectRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium text-foreground truncate">{project.name}</p>
-            {!runStatus && <StatusBadge status={project.importStatus} />}
+            {!runStatus && <StatusBadge status={project.importStatus} failedFilesCount={project.importLog?.failedFilesCount} />}
           </div>
           {/* DB-current counts + timestamp */}
           {isImported && project.counts && !runStatus && (
@@ -272,6 +330,18 @@ function ProjectRow({
             <p className="text-xs text-muted-foreground truncate mt-0.5">{project.description}</p>
           )}
         </div>
+
+        {/* Inline Re-import button for attention projects */}
+        {!runStatus && ATTENTION_STATUSES_SET.has(project.importStatus) && !importing && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => { e.stopPropagation(); onReimport(); }}
+            className="h-6 px-2 text-[10px] gap-1 shrink-0"
+          >
+            <RefreshCw className="w-3 h-3" /> Re-import
+          </Button>
+        )}
 
         {/* Live run status */}
         {runStatus && (
@@ -326,7 +396,12 @@ function ResultCard({ id, status, name }: { id: number; status: RunStatus; name:
       <div className="flex items-center gap-2">
         {runStatusIcon(status)}
         <p className="text-sm font-medium text-foreground truncate flex-1">{name}</p>
-        {status.state === "done" && <StatusBadge status={status.result.importStatus} />}
+        {status.state === "done" && (
+          <StatusBadge
+            status={status.result.importStatus}
+            failedFilesCount={status.result.importLog.failedFilesCount}
+          />
+        )}
       </div>
 
       {status.state === "done" && (
@@ -367,28 +442,41 @@ function ResultCard({ id, status, name }: { id: number; status: RunStatus; name:
             </p>
           )}
 
-          {/* Failed files from this run */}
-          {status.result.importLog.failedFiles.length > 0 && (
-            <details>
-              <summary className={cn("text-xs cursor-pointer select-none font-medium",
-                status.result.importLog.failedFiles.some((f: FailedFile) => !f.is404)
-                  ? "text-red-600"
-                  : "text-amber-600"
-              )}>
-                {status.result.importLog.failedFiles.length} file{status.result.importLog.failedFiles.length > 1 ? "s" : ""} failed — expand
-              </summary>
-              <ul className="mt-1.5 space-y-1 max-h-40 overflow-y-auto">
-                {status.result.importLog.failedFiles.map((f: FailedFile, i: number) => (
-                  <li key={i} className="flex items-start gap-1.5 text-xs">
-                    {f.is404
-                      ? <FileX className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
-                      : <XCircle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />}
-                    <span className="text-muted-foreground"><span className="font-medium text-foreground">{f.filename}</span> — {f.reason}</span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+          {/* Skipped/failed files from this run */}
+          {status.result.importLog.failedFiles.length > 0 && (() => {
+            const ff           = status.result.importLog.failedFiles as FailedFile[];
+            const oversized    = ff.filter((f) => f.isOversized);
+            const notFound     = ff.filter((f) => f.is404);
+            const errored      = ff.filter((f) => !f.is404 && !f.isOversized);
+            return (
+              <>
+                {oversized.length > 0 && (
+                  <p className="text-xs text-amber-700 font-medium">
+                    {oversized.length} large file{oversized.length > 1 ? "s" : ""} skipped (too large to import via server — download manually from Basecamp)
+                  </p>
+                )}
+                {(errored.length > 0 || notFound.length > 0) && (
+                  <details>
+                    <summary className={cn("text-xs cursor-pointer select-none font-medium",
+                      errored.length > 0 ? "text-red-600" : "text-amber-600"
+                    )}>
+                      {errored.length + notFound.length} file{errored.length + notFound.length > 1 ? "s" : ""} failed — expand
+                    </summary>
+                    <ul className="mt-1.5 space-y-1 max-h-40 overflow-y-auto">
+                      {[...errored, ...notFound].map((f: FailedFile, i: number) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs">
+                          {f.is404
+                            ? <FileX className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
+                            : <XCircle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />}
+                          <span className="text-muted-foreground"><span className="font-medium text-foreground">{f.filename}</span> — {f.reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
@@ -824,19 +912,26 @@ export function BasecampImporter({
   const [importing, setImporting] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(true);
 
-  const ATTENTION_STATUSES: ImportStatus[] = ["LEGACY_IMPORT", "PARTIALLY_IMPORTED", "IMPORT_FAILED"];
-
   const { newProjects, attentionProjects, warningProjects, importedProjects, archivedBcProjects } = useMemo(() => {
     if (!projects) return { newProjects: [], attentionProjects: [], warningProjects: [], importedProjects: [], archivedBcProjects: [] };
     const q = search.trim().toLowerCase();
     const all = q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : projects;
     const active   = all.filter((p) => p.bcStatus !== "archived");
     const archived = all.filter((p) => p.bcStatus === "archived");
+
+    // A project with IMPORTED_WITH_WARNINGS is "actually imported" if it has no retryable failures
+    // (only oversized/404 files or soft vault notes). Show it with the clean imports, not warnings.
+    const hasRetryableFailures = (p: BCProjectWithStatus) =>
+      (p.importLog?.failedFiles ?? []).some((f: FailedFile) => !f.is404 && !f.isOversized);
+
     return {
-      newProjects:        active.filter((p) => p.importStatus === "NOT_IMPORTED"),
-      attentionProjects:  active.filter((p) => (ATTENTION_STATUSES as string[]).includes(p.importStatus)),
-      warningProjects:    active.filter((p) => p.importStatus === "IMPORTED_WITH_WARNINGS"),
-      importedProjects:   active.filter((p) => p.importStatus === "IMPORTED"),
+      newProjects:       active.filter((p) => p.importStatus === "NOT_IMPORTED"),
+      attentionProjects: active.filter((p) => ATTENTION_STATUSES_SET.has(p.importStatus)),
+      warningProjects:   active.filter((p) => p.importStatus === "IMPORTED_WITH_WARNINGS" && hasRetryableFailures(p)),
+      importedProjects:  active.filter((p) =>
+        p.importStatus === "IMPORTED" ||
+        (p.importStatus === "IMPORTED_WITH_WARNINGS" && !hasRetryableFailures(p))
+      ),
       archivedBcProjects: archived,
     };
   }, [projects, search]);
@@ -941,6 +1036,40 @@ export function BasecampImporter({
     setSelected(new Set());
   }
 
+  async function handleReimport(projectId: number) {
+    if (importing) return;
+    setImporting(true);
+    setResultsOpen(true);
+    setStatuses((prev) => new Map(prev).set(projectId, { state: "running" }));
+    try {
+      const result = await importBasecampProject(projectId);
+      setStatuses((prev) => new Map(prev).set(projectId, { state: "done", result }));
+      setProjects((prev) =>
+        prev
+          ? prev.map((p) =>
+              p.id === projectId
+                ? {
+                    ...p,
+                    importStatus: result.importStatus,
+                    importedAt: p.importedAt ?? new Date(),
+                    importLog: result.importLog,
+                    counts: {
+                      tasks:       result.tasksImported,
+                      discussions: result.messagesImported,
+                      files:       result.filesStored + result.filesMetadataOnly,
+                      folders:     result.foldersCreated,
+                    },
+                  }
+                : p
+            )
+          : prev
+      );
+    } catch (e) {
+      setStatuses((prev) => new Map(prev).set(projectId, { state: "error", message: String(e) }));
+    }
+    setImporting(false);
+  }
+
   async function handleRetry(bcProjectId: number) {
     const project = projects?.find((p) => p.id === bcProjectId);
     if (!project) return;
@@ -1043,9 +1172,9 @@ export function BasecampImporter({
               <h2 className="text-sm font-semibold text-foreground">Basecamp Projects</h2>
               {projects && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {newProjects.length} not yet imported
+                  {newProjects.length} ready to import
                   {attentionProjects.length > 0 && ` · ${attentionProjects.length} need re-import`}
-                  {warningProjects.length  > 0 && ` · ${warningProjects.length} with warnings`}
+                  {warningProjects.length  > 0 && ` · ${warningProjects.length} with notes`}
                   {importedProjects.length > 0 && ` · ${importedProjects.length} fully imported`}
                   {archivedBcProjects.length > 0 && ` · ${archivedBcProjects.length} archived in Basecamp`}
                   {selected.size > 0 && ` · ${selected.size} selected`}
@@ -1128,7 +1257,7 @@ export function BasecampImporter({
                             : <Square className="w-3.5 h-3.5" />}
                         </button>
                         <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">
-                          Not yet imported ({newProjects.length})
+                          Ready to Import ({newProjects.length})
                         </span>
                       </div>
                     </div>
@@ -1144,14 +1273,15 @@ export function BasecampImporter({
                         onToggle={() => toggleProject(p.id)}
                         onExpandToggle={() => setExpandedProject(expandedProject === p.id ? null : p.id)}
                         onRetry={() => handleRetry(p.id)}
+                        onReimport={() => handleReimport(p.id)}
                       />
                     ))}
                   </>
                 )}
 
-                {newProjects.length === 0 && attentionProjects.length === 0 && archivedBcProjects.filter(p => p.importStatus === "NOT_IMPORTED").length === 0 && !search && (
+                {newProjects.length === 0 && attentionProjects.length === 0 && warningProjects.length === 0 && archivedBcProjects.filter(p => p.importStatus === "NOT_IMPORTED").length === 0 && !search && (
                   <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    All active projects have been imported successfully.
+                    All active projects have been imported.
                   </div>
                 )}
 
@@ -1182,7 +1312,7 @@ export function BasecampImporter({
                           </span>
                         </button>
                       </div>
-                      <span className="text-[10px] text-amber-600">Legacy / partial / failed</span>
+                      <span className="text-[10px] text-amber-600">Import did not complete — re-import to fix</span>
                     </div>
                     {showAttention && attentionProjects.map((p) => (
                       <ProjectRow
@@ -1196,6 +1326,7 @@ export function BasecampImporter({
                         onToggle={() => toggleProject(p.id)}
                         onExpandToggle={() => setExpandedProject(expandedProject === p.id ? null : p.id)}
                         onRetry={() => handleRetry(p.id)}
+                        onReimport={() => handleReimport(p.id)}
                       />
                     ))}
                   </>
@@ -1204,6 +1335,15 @@ export function BasecampImporter({
                 {/* ── Imported with warnings ── */}
                 {warningProjects.length > 0 && (
                   <>
+                    {(() => {
+                      const hasRealFailures = warningProjects.some((p) =>
+                        (p.importLog?.failedFilesCount ?? 0) > 0 &&
+                        (p.importLog?.failedFiles ?? []).some((f: FailedFile) => !f.isOversized)
+                      );
+                      const hasOversized = warningProjects.some((p) =>
+                        (p.importLog?.failedFiles ?? []).some((f: FailedFile) => f.isOversized)
+                      );
+                      return (
                     <div className="flex items-center justify-between px-4 py-2 bg-amber-50/40 sticky top-0 z-10 border-t border-border">
                       <div className="flex items-center gap-2">
                         <button
@@ -1224,12 +1364,20 @@ export function BasecampImporter({
                             ? <ChevronUp className="w-3.5 h-3.5" />
                             : <ChevronDown className="w-3.5 h-3.5" />}
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
-                            Imported with Warnings ({warningProjects.length})
+                            Imported with Notes ({warningProjects.length})
                           </span>
                         </button>
                       </div>
-                      <span className="text-[10px] text-amber-600">Some files missing — re-import to fix</span>
+                      <span className="text-[10px] text-amber-600">
+                        {hasRealFailures
+                          ? "Some files could not be imported — expand to retry"
+                          : hasOversized
+                          ? "Large files skipped — download manually from Basecamp"
+                          : "Minor notes only — no action needed"}
+                      </span>
                     </div>
+                      );
+                    })()}
                     {showWarnings && warningProjects.map((p) => (
                       <ProjectRow
                         key={p.id}
@@ -1242,6 +1390,7 @@ export function BasecampImporter({
                         onToggle={() => toggleProject(p.id)}
                         onExpandToggle={() => setExpandedProject(expandedProject === p.id ? null : p.id)}
                         onRetry={() => handleRetry(p.id)}
+                        onReimport={() => handleReimport(p.id)}
                       />
                     ))}
                   </>
@@ -1292,6 +1441,7 @@ export function BasecampImporter({
                         onToggle={() => toggleProject(p.id)}
                         onExpandToggle={() => setExpandedProject(expandedProject === p.id ? null : p.id)}
                         onRetry={() => handleRetry(p.id)}
+                        onReimport={() => handleReimport(p.id)}
                       />
                     ))}
                   </>
@@ -1342,6 +1492,7 @@ export function BasecampImporter({
                         onToggle={() => toggleProject(p.id)}
                         onExpandToggle={() => setExpandedProject(expandedProject === p.id ? null : p.id)}
                         onRetry={() => handleRetry(p.id)}
+                        onReimport={() => handleReimport(p.id)}
                       />
                     ))}
                   </>
@@ -1358,7 +1509,7 @@ export function BasecampImporter({
                   onClick={() => { toggleSectionAll(warningProjects); setShowWarnings(true); }}
                   className="text-xs text-amber-700 hover:opacity-70 transition-opacity font-medium"
                 >
-                  Select all with warnings ({warningProjects.length})
+                  Select all with notes ({warningProjects.length})
                 </button>
               )}
               {attentionProjects.length > 0 && (
