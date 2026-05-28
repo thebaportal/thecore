@@ -2127,7 +2127,7 @@ export async function backfillCampfire(): Promise<CampfireBackfillResult> {
   return { messagesImported, chatsCreated, projectsProcessed: projects.length - projectsSkipped, projectsSkipped, errors };
 }
 
-// ── Diagnostic: sample raw campfire content from Basecamp ───────────────────
+// ── Diagnostic: find campfire lines with @mentions ───────────────────────────
 export async function debugCampfireContent(): Promise<{ projectId: string; lines: { id: number; rawContent: string; converted: string }[] }> {
   const { token, accountId } = await getBasecampCredentials();
   const ctx = await syncCurrentIdentity();
@@ -2137,10 +2137,14 @@ export async function debugCampfireContent(): Promise<{ projectId: string; lines
   const projects = await db.project.findMany({
     where: { id: { startsWith: "bc-" }, organizationId: org.id },
     select: { id: true },
-    take: 10,
+    take: 20,
   });
 
+  const results: { id: number; rawContent: string; converted: string }[] = [];
+  let foundProjectId = "";
+
   for (const project of projects) {
+    if (results.length >= 6) break;
     const bcProjectId = parseInt(project.id.replace("bc-", ""), 10);
     try {
       const bcProject = await bcFetch<BCProject>(`/projects/${bcProjectId}.json`, token, accountId);
@@ -2148,17 +2152,42 @@ export async function debugCampfireContent(): Promise<{ projectId: string; lines
       if (!chatDock) continue;
       const linesUrl = chatDock.url.replace(/\.json$/, "/lines.json");
       const lines = await bcFetchFullUrl<BCLine>(linesUrl, token);
-      const sample = lines.slice(0, 10).map((l) => ({
-        id: l.id,
-        rawContent: l.content ?? "",
-        converted: htmlToMarkdown(l.content ?? ""),
-      }));
-      if (sample.length > 0) return { projectId: project.id, lines: sample };
+      // Prefer lines that look like they have @mentions or HTML
+      const mentionLines = lines.filter((l) => l.content && (l.content.includes("@") || l.content.includes("<")));
+      if (mentionLines.length > 0) {
+        foundProjectId = project.id;
+        for (const l of mentionLines.slice(0, 6)) {
+          results.push({ id: l.id, rawContent: l.content ?? "", converted: htmlToMarkdown(l.content ?? "") });
+        }
+        break;
+      }
     } catch {
       continue;
     }
   }
-  return { projectId: "", lines: [] };
+
+  // Fallback: if no mention lines found, show plain samples from first project with any lines
+  if (results.length === 0) {
+    for (const project of projects.slice(0, 5)) {
+      const bcProjectId = parseInt(project.id.replace("bc-", ""), 10);
+      try {
+        const bcProject = await bcFetch<BCProject>(`/projects/${bcProjectId}.json`, token, accountId);
+        const chatDock = bcProject.dock.find((d) => d.name === "chat");
+        if (!chatDock) continue;
+        const linesUrl = chatDock.url.replace(/\.json$/, "/lines.json");
+        const lines = await bcFetchFullUrl<BCLine>(linesUrl, token);
+        if (lines.length > 0) {
+          foundProjectId = project.id + " (no @mentions found)";
+          for (const l of lines.slice(0, 6)) {
+            results.push({ id: l.id, rawContent: l.content ?? "", converted: htmlToMarkdown(l.content ?? "") });
+          }
+          break;
+        }
+      } catch { continue; }
+    }
+  }
+
+  return { projectId: foundProjectId, lines: results };
 }
 
 // ── Basecamp private ping (DM) importer ──────────────────────────────────────
