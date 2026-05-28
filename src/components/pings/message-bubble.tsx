@@ -284,7 +284,7 @@ export function MessageBubble({
 
   return (
     <div className={cn(
-      "group flex gap-3 px-4 transition-colors relative",
+      "group flex gap-3 px-4 transition-colors",
       grouped ? "pt-0.5 pb-0.5" : "pt-5 pb-0.5",
       isOwn ? "hover:bg-primary/[0.04]" : "hover:bg-muted/25",
     )}>
@@ -328,85 +328,90 @@ export function MessageBubble({
           <InlineEdit messageId={message.id} initialBody={message.body} onDone={() => setEditing(false)} />
         ) : (
           <>
-            <MessageBody body={message.body} attachments={message.attachments} isOwn={isOwn} membersByName={membersByName} />
-            {message.editedAt && (
-              <span className="text-[9px] text-muted-foreground/50 mt-0.5 ml-1 select-none">(edited)</span>
-            )}
-          </>
-        )}
-
-        {/* Reactions */}
-        {Object.keys(reactionGroups).length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {Object.values(reactionGroups).map((r) => (
-              <button
-                key={r.emoji}
-                onClick={() => handleReact(r.emoji)}
-                disabled={isPending}
-                title={r.names.join(", ")}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs transition-colors",
-                  r.mine
-                    ? "border-primary/40 bg-primary/8 text-primary"
-                    : "border-border bg-muted/60 text-muted-foreground hover:border-primary/30"
+            {/* Bubble + hover actions sit inline so actions are right next to the text */}
+            <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <MessageBody body={message.body} attachments={message.attachments} isOwn={isOwn} membersByName={membersByName} />
+                {message.editedAt && (
+                  <span className="text-[9px] text-muted-foreground/50 mt-0.5 ml-1 select-none">(edited)</span>
                 )}
-              >
-                {r.emoji} <span className="text-[11px]">{r.count}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+              </div>
 
-      {/* Hover actions */}
-      <div className="absolute right-4 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-card border border-border rounded-xl shadow-md px-1.5 py-0.5">
-        <div className="relative">
-          <button
-            onClick={() => setEmojiOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <SmilePlus className="w-3.5 h-3.5" />
-          </button>
-          {emojiOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setEmojiOpen(false)} />
-              <div className="absolute right-0 top-full mt-1.5 z-50 flex gap-1 p-2 rounded-2xl border border-border bg-card shadow-xl">
-                {QUICK_EMOJIS.map((emoji) => (
-                  <button key={emoji} onClick={() => handleReact(emoji)}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl text-base hover:bg-muted transition-colors">
-                    {emoji}
+              {/* Hover actions */}
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-card border border-border rounded-xl shadow-md px-1.5 py-0.5 shrink-0">
+                <div className="relative">
+                  <button
+                    onClick={() => setEmojiOpen((v) => !v)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <SmilePlus className="w-3.5 h-3.5" />
+                  </button>
+                  {emojiOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setEmojiOpen(false)} />
+                      <div className="absolute left-0 top-full mt-1.5 z-50 flex gap-1 p-2 rounded-2xl border border-border bg-card shadow-xl">
+                        {QUICK_EMOJIS.map((emoji) => (
+                          <button key={emoji} onClick={() => handleReact(emoji)}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl text-base hover:bg-muted transition-colors">
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {onReply && (
+                  <button
+                    onClick={() => onReply(message.id)}
+                    className="px-2 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    Reply
+                  </button>
+                )}
+                {isOwn && (
+                  <button
+                    onClick={() => setEditing(true)}
+                    title="Edit message"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {isOwn && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={isPending}
+                    title="Delete message"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-muted transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Reactions */}
+            {Object.keys(reactionGroups).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Object.values(reactionGroups).map((r) => (
+                  <button
+                    key={r.emoji}
+                    onClick={() => handleReact(r.emoji)}
+                    disabled={isPending}
+                    title={r.names.join(", ")}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs transition-colors",
+                      r.mine
+                        ? "border-primary/40 bg-primary/8 text-primary"
+                        : "border-border bg-muted/60 text-muted-foreground hover:border-primary/30"
+                    )}
+                  >
+                    {r.emoji} <span className="text-[11px]">{r.count}</span>
                   </button>
                 ))}
               </div>
-            </>
-          )}
-        </div>
-        {onReply && (
-          <button
-            onClick={() => onReply(message.id)}
-            className="px-2 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            Reply
-          </button>
-        )}
-        {isOwn && !editing && (
-          <button
-            onClick={() => setEditing(true)}
-            title="Edit message"
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {isOwn && (
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            title="Delete message"
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+            )}
+          </>
         )}
       </div>
     </div>
