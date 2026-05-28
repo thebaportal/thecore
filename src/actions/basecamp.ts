@@ -898,6 +898,94 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
     }
   }
 
+  // ── Phase: Campfire (project group chat) ─────────────────────────────────
+  log("Starting campfire import");
+  const chatDock = bcProject.dock.find((d) => d.name === "chat");
+  if (!chatDock) {
+    log("No chat dock — skipping campfire");
+    phases.push({ phase: "Campfire", status: "skipped" });
+  } else {
+    try {
+      const linesUrl = chatDock.url.replace(/\.json$/, "/lines.json");
+      const campfireLines = await bcFetchFullUrl<BCLine>(linesUrl, token);
+      log(`Fetched ${campfireLines.length} campfire lines`);
+
+      // Use existing project chat ping if one was already auto-created by the UI
+      const existingChat = await db.ping.findFirst({
+        where: { organizationId: org.id, projectId: project.id, type: "GROUP" },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      });
+      let campfirePingId: string;
+      if (existingChat) {
+        campfirePingId = existingChat.id;
+      } else {
+        const newPing = await db.ping.create({
+          data: {
+            id: `bc-campfire-${bcProjectId}`,
+            organizationId: org.id,
+            type: "GROUP",
+            title: "Project Chat",
+            projectId: project.id,
+          },
+        });
+        campfirePingId = newPing.id;
+      }
+
+      const campfireParticipants = new Set<string>();
+      let campfireMessages = 0;
+
+      for (const line of campfireLines) {
+        const content = line.content?.trim();
+        if (!content) continue;
+        try {
+          const authorId = await resolveBasecampUser(line.creator, org.id, user.id);
+          campfireParticipants.add(authorId);
+          await db.message.upsert({
+            where: { id: `bc-campfire-line-${bcProjectId}-${line.id}` },
+            create: {
+              id: `bc-campfire-line-${bcProjectId}-${line.id}`,
+              pingId: campfirePingId,
+              authorId,
+              body: htmlToMarkdown(content),
+              createdAt: new Date(line.created_at),
+              updatedAt: new Date(line.created_at),
+            },
+            update: { body: htmlToMarkdown(content) },
+          });
+          campfireMessages++;
+        } catch (e) {
+          errors.push(`⚠ Campfire line ${line.id}: ${String(e)}`);
+        }
+      }
+
+      for (const uid of campfireParticipants) {
+        await db.pingParticipant.upsert({
+          where: { pingId_userId: { pingId: campfirePingId, userId: uid } },
+          create: { pingId: campfirePingId, userId: uid },
+          update: {},
+        });
+      }
+
+      if (campfireLines.length > 0) {
+        const lastLine = campfireLines[campfireLines.length - 1]!;
+        await db.ping.update({
+          where: { id: campfirePingId },
+          data: { updatedAt: new Date(lastLine.created_at) },
+        });
+      }
+
+      messagesImported += campfireMessages;
+      log(`Campfire done: ${campfireMessages} messages imported`);
+      phases.push({ phase: "Campfire", status: "ok", count: campfireMessages });
+    } catch (e) {
+      const msg = String(e);
+      log(`ERROR in campfire: ${msg}`);
+      errors.push(`⚠ Campfire: ${msg}`);
+      phases.push({ phase: "Campfire", status: "skipped" });
+    }
+  }
+
   // ── Phase: Docs & Files (Vault) ───────────────────────────────────────────
   log("Starting vault (docs & files) import");
   const vaultDock = bcProject.dock.find((d) => d.name === "vault");
@@ -1922,6 +2010,121 @@ export async function backfillProjectMembers(): Promise<ProjectMemberBackfillRes
   revalidatePath("/team");
   revalidatePath("/projects");
   return { membershipsCreated, projectsProcessed: projects.length, errors };
+}
+
+// ── Campfire backfill ────────────────────────────────────────────────────────
+// Imports Basecamp Campfire (project group chat) for all already-imported
+// projects. Safe to re-run — upserts on bc-campfire-line-{projectId}-{lineId}.
+
+export type CampfireBackfillResult = {
+  messagesImported: number;
+  chatsCreated: number;
+  projectsProcessed: number;
+  projectsSkipped: number;
+  errors: string[];
+};
+
+export async function backfillCampfire(): Promise<CampfireBackfillResult> {
+  const { token, accountId } = await getBasecampCredentials();
+  const ctx = await syncCurrentIdentity();
+  if (!ctx?.org) throw new Error("No active organization");
+  const { user, org } = ctx as { user: NonNullable<typeof ctx.user>; org: NonNullable<typeof ctx.org> };
+
+  const projects = await db.project.findMany({
+    where: { id: { startsWith: "bc-" }, organizationId: org.id },
+    select: { id: true },
+  });
+
+  let messagesImported = 0;
+  let chatsCreated = 0;
+  let projectsSkipped = 0;
+  const errors: string[] = [];
+
+  for (const project of projects) {
+    const bcProjectId = parseInt(project.id.replace("bc-", ""), 10);
+    try {
+      const bcProject = await bcFetch<BCProject>(`/projects/${bcProjectId}.json`, token, accountId);
+      const chatDock = bcProject.dock.find((d) => d.name === "chat");
+      if (!chatDock) { projectsSkipped++; continue; }
+
+      const linesUrl = chatDock.url.replace(/\.json$/, "/lines.json");
+      const lines = await bcFetchFullUrl<BCLine>(linesUrl, token);
+
+      // Reuse existing project chat ping if one already exists (may have been
+      // auto-created when a user visited the Messages tab before the import ran).
+      const existingChat = await db.ping.findFirst({
+        where: { organizationId: org.id, projectId: project.id, type: "GROUP" },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      });
+
+      let pingId: string;
+      if (existingChat) {
+        pingId = existingChat.id;
+      } else {
+        const newPing = await db.ping.create({
+          data: {
+            id: `bc-campfire-${bcProjectId}`,
+            organizationId: org.id,
+            type: "GROUP",
+            title: "Project Chat",
+            projectId: project.id,
+          },
+        });
+        pingId = newPing.id;
+        chatsCreated++;
+      }
+
+      const participants = new Set<string>();
+
+      for (const line of lines) {
+        const content = line.content?.trim();
+        if (!content) continue;
+        try {
+          const authorId = await resolveBasecampUser(line.creator, org.id, user.id);
+          participants.add(authorId);
+          await db.message.upsert({
+            where: { id: `bc-campfire-line-${bcProjectId}-${line.id}` },
+            create: {
+              id: `bc-campfire-line-${bcProjectId}-${line.id}`,
+              pingId,
+              authorId,
+              body: htmlToMarkdown(line.content),
+              createdAt: new Date(line.created_at),
+              updatedAt: new Date(line.created_at),
+            },
+            update: { body: htmlToMarkdown(line.content) },
+          });
+          messagesImported++;
+        } catch (e) {
+          if ((e as { code?: string })?.code === "P2002") continue;
+          errors.push(`line ${line.id} in ${project.id}: ${String(e)}`);
+        }
+      }
+
+      for (const uid of participants) {
+        await db.pingParticipant.upsert({
+          where: { pingId_userId: { pingId, userId: uid } },
+          create: { pingId, userId: uid },
+          update: {},
+        });
+      }
+
+      if (lines.length > 0) {
+        const lastLine = lines[lines.length - 1]!;
+        await db.ping.update({
+          where: { id: pingId },
+          data: { updatedAt: new Date(lastLine.created_at) },
+        });
+      }
+    } catch (e) {
+      errors.push(`project ${project.id}: ${String(e)}`);
+    }
+  }
+
+  revalidatePath("/projects");
+  revalidatePath("/inbox");
+  return { messagesImported, chatsCreated, projectsProcessed: projects.length - projectsSkipped, projectsSkipped, errors };
 }
 
 // ── Basecamp private ping (DM) importer ──────────────────────────────────────

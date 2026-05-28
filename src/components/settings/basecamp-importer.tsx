@@ -836,6 +836,54 @@ function ProjectMembersBackfill() {
   );
 }
 
+// ── Campfire backfill card ────────────────────────────────────────────────────
+
+function CampfireBackfill() {
+  const [isPending, startTransition] = useTransition();
+  const [result, setResult] = useState<{ messagesImported: number; chatsCreated: number; projectsProcessed: number; projectsSkipped: number; errors: string[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function run() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const { backfillCampfire } = await import("@/actions/basecamp");
+        setResult(await backfillCampfire());
+      } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    });
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Import Project Campfire Chats</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Imports Basecamp Campfire messages into each project&apos;s Messages tab. Run this once after importing your projects.
+          </p>
+        </div>
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+          {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
+        </Button>
+      </div>
+      {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
+      {result && !error && (
+        <div className="grid grid-cols-3 divide-x divide-border">
+          <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-emerald-600">{result.messagesImported}</p><p className="text-xs text-muted-foreground mt-0.5">Messages imported</p></div>
+          <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-foreground">{result.chatsCreated}</p><p className="text-xs text-muted-foreground mt-0.5">Chats created</p></div>
+          <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-foreground">{result.projectsProcessed}</p><p className="text-xs text-muted-foreground mt-0.5">Projects processed</p></div>
+        </div>
+      )}
+      {result && result.errors.length > 0 && (
+        <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>
+      )}
+      {!result && !error && (
+        <div className="px-5 py-6 text-center text-sm text-muted-foreground">Safe to run multiple times — existing messages are skipped.</div>
+      )}
+    </div>
+  );
+}
+
 // ── Setup instructions (shown when no credentials configured) ─────────────────
 
 function SetupInstructions() {
@@ -1573,6 +1621,9 @@ export function BasecampImporter({
 
       {/* Project members backfill */}
       {connected && <ProjectMembersBackfill />}
+
+      {/* Campfire (project chat) backfill */}
+      {connected && <CampfireBackfill />}
 
       {/* Step 1: Import members */}
       {connected && <BasecampPeopleImport />}
