@@ -29,11 +29,11 @@ export function UserAvatar({
     <img
       src={avatarUrl}
       alt={name}
-      className={cn("rounded-full object-cover cursor-pointer shrink-0", sizeClasses[size], className)}
+      className={cn("rounded-full object-cover cursor-pointer shrink-0 ring-1 ring-border/50", sizeClasses[size], className)}
     />
   ) : (
     <div className={cn(
-      "rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold cursor-pointer shrink-0",
+      "rounded-full bg-muted text-muted-foreground flex items-center justify-center font-semibold cursor-pointer shrink-0 ring-1 ring-border",
       sizeClasses[size],
       className
     )}>
