@@ -215,7 +215,7 @@ export function MessageBubble({
               "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold cursor-pointer shrink-0 overflow-hidden",
               isOwn
                 ? "bg-primary/15 text-primary ring-2 ring-primary/20"
-                : "bg-muted text-foreground"
+                : "bg-muted text-foreground ring-1 ring-border"
             )}>
               {message.author.avatarUrl
                 ? <img src={message.author.avatarUrl} alt={message.author.name} className="w-full h-full object-cover" />
