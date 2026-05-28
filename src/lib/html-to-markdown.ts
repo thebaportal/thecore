@@ -58,6 +58,33 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/<div[^>]*>([\s\S]*?)<\/div>/gi, (_, t: string) => `${t.trim()}\n`);
   md = md.replace(/<hr[^>]*>/gi, "\n---\n\n");
 
+  // ── Basecamp-specific elements ───────────────────────────────────────────
+  // @mentions: <bc-attachment content-type="application/vnd.basecamp.mention">Name</bc-attachment>
+  md = md.replace(
+    /<bc-attachment[^>]*content-type="application\/vnd\.basecamp\.mention"[^>]*>([\s\S]*?)<\/bc-attachment>/gi,
+    (_, inner: string) => {
+      const name = inner.replace(/<[^>]+>/g, "").trim();
+      return name ? `**@${name}**` : "";
+    }
+  );
+
+  // Quoted campfire replies: <bc-attachment content-type="...recording-line">quoted text</bc-attachment>
+  md = md.replace(
+    /<bc-attachment[^>]*content-type="application\/vnd\.basecamp\.3\.recording-line"[^>]*>([\s\S]*?)<\/bc-attachment>/gi,
+    (_, inner: string) => {
+      const text = inner.replace(/<[^>]+>/g, "").trim();
+      return text ? `> ${text}\n\n` : "";
+    }
+  );
+
+  // <bc-quote> tags (alternate quote format)
+  md = md.replace(/<bc-quote[^>]*>([\s\S]*?)<\/bc-quote>/gi, (_, inner: string) =>
+    inner.trim().split("\n").filter(Boolean).map((l: string) => `> ${l.replace(/<[^>]+>/g, "").trim()}`).join("\n") + "\n\n"
+  );
+
+  // Strip any remaining bc-* tags (keep their text content)
+  md = md.replace(/<\/?bc-[a-z][^>]*>/gi, "");
+
   // Strip remaining tags
   md = md.replace(/<[^>]+>/g, "");
 
