@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import { ArrowLeft } from "lucide-react";
 import { getProject } from "@/actions/projects";
 import { ProjectTabs } from "@/components/projects/project-tabs";
 import { ProjectHeaderActions } from "@/components/projects/project-header-actions";
@@ -47,6 +48,15 @@ export default async function ProjectLayout({
       {/* Project header */}
       <div className="px-6 pt-7 pb-0 bg-card border-b border-border">
         <div className="max-w-[1440px] mx-auto">
+
+          {/* Back link */}
+          <a
+            href="/projects"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            All projects
+          </a>
 
           {/* Title row */}
           <div className="flex items-start gap-4 mb-4">
