@@ -50,27 +50,59 @@ function AttachmentList({ attachments }: { attachments: Attachment[] }) {
   );
 }
 
+function renderMention(name: string, display: string, membersByName: Record<string, string>, key: number): React.ReactNode {
+  const userId = membersByName[name];
+  const chip = <span className="text-primary font-semibold cursor-pointer hover:underline">@{name}</span>;
+  if (userId) return <UserCard key={key} userId={userId} side="top" align="center">{chip}</UserCard>;
+  return <span key={key} className="text-primary font-semibold">{display}</span>;
+}
+
 function renderInline(text: string, membersByName?: Record<string, string>): React.ReactNode[] {
-  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
-  return parts.map((part, i) => {
+  // Split on markdown bold/italic AND plain @mentions
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|@\S+(?:\s+\S+){0,3})/g);
+  const nodes: React.ReactNode[] = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!;
+
     if (part.startsWith("**") && part.endsWith("**")) {
       const inner = part.slice(2, -2);
       if (inner.startsWith("@") && membersByName) {
-        const name = inner.slice(1);
-        const userId = membersByName[name];
-        if (userId) {
-          return (
-            <UserCard key={i} userId={userId} side="top" align="center">
-              <span className="text-primary font-semibold cursor-pointer hover:underline">{inner}</span>
-            </UserCard>
-          );
+        nodes.push(renderMention(inner.slice(1), inner, membersByName, i));
+      } else {
+        nodes.push(<strong key={i}>{inner}</strong>);
+      }
+      continue;
+    }
+
+    if (part.startsWith("*") && part.endsWith("*")) {
+      nodes.push(<em key={i}>{part.slice(1, -1)}</em>);
+      continue;
+    }
+
+    if (part.startsWith("@") && membersByName) {
+      // Try progressively shorter suffixes until we find a member name match
+      // e.g. "@Omojo Amanyi extra" → try "Omojo Amanyi extra", "Omojo Amanyi", "Omojo"
+      const words = part.slice(1).split(" ");
+      let matched = false;
+      for (let len = words.length; len >= 1; len--) {
+        const candidate = words.slice(0, len).join(" ");
+        if (membersByName[candidate]) {
+          const remainder = words.slice(len).join(" ");
+          nodes.push(renderMention(candidate, `@${candidate}`, membersByName, i));
+          if (remainder) nodes.push(` ${remainder}`);
+          matched = true;
+          break;
         }
       }
-      return <strong key={i}>{inner}</strong>;
+      if (!matched) nodes.push(part);
+      continue;
     }
-    if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
-    return part;
-  });
+
+    nodes.push(part);
+  }
+
+  return nodes;
 }
 
 function MarkdownBody({ text, className, membersByName }: { text: string; className?: string; membersByName?: Record<string, string> }) {
