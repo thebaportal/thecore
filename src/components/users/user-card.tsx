@@ -90,22 +90,14 @@ export function UserCard({
             </div>
 
             {/* Stats */}
-            {(user.approvedCount > 0 || user.projectCount > 0) && (
-              <div className="flex justify-center gap-6 py-3 border-b border-border/60 mx-4">
-                {user.approvedCount > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-foreground tabular-nums">{user.approvedCount}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Approved</p>
-                  </div>
-                )}
-                {user.projectCount > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-foreground tabular-nums">{user.projectCount}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                      {user.projectCount === 1 ? "Project" : "Projects"}
-                    </p>
-                  </div>
-                )}
+            {user.projectCount > 0 && (
+              <div className="flex justify-center py-3 border-b border-border/60 mx-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground tabular-nums">{user.projectCount}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                    {user.projectCount === 1 ? "Project" : "Projects"}
+                  </p>
+                </div>
               </div>
             )}
 
