@@ -315,6 +315,12 @@ export function PingThread({
     return participants;
   }, [participants, members]);
 
+  const membersByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of headerPeople) map[p.name] = p.id;
+    return map;
+  }, [headerPeople]);
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* ── Header: participants + AI actions ── */}
@@ -457,6 +463,7 @@ export function PingThread({
                         message={msg}
                         prevMessage={showDateSep ? undefined : prev}
                         currentUserId={currentUserId}
+                        membersByName={membersByName}
                         onReply={handleReply}
                       />
                     </div>

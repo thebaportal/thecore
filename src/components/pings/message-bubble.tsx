@@ -50,16 +50,30 @@ function AttachmentList({ attachments }: { attachments: Attachment[] }) {
   );
 }
 
-function renderInline(text: string): React.ReactNode[] {
+function renderInline(text: string, membersByName?: Record<string, string>): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
   return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const inner = part.slice(2, -2);
+      if (inner.startsWith("@") && membersByName) {
+        const name = inner.slice(1);
+        const userId = membersByName[name];
+        if (userId) {
+          return (
+            <UserCard key={i} userId={userId} side="top" align="center">
+              <span className="text-primary font-semibold cursor-pointer hover:underline">{inner}</span>
+            </UserCard>
+          );
+        }
+      }
+      return <strong key={i}>{inner}</strong>;
+    }
     if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
     return part;
   });
 }
 
-function MarkdownBody({ text, className }: { text: string; className?: string }) {
+function MarkdownBody({ text, className, membersByName }: { text: string; className?: string; membersByName?: Record<string, string> }) {
   const lines = text.split("\n");
   const nodes: React.ReactNode[] = [];
   let i = 0;
@@ -73,11 +87,11 @@ function MarkdownBody({ text, className }: { text: string; className?: string })
       }
       nodes.push(
         <blockquote key={i} className="border-l-2 border-muted-foreground/40 pl-2 my-1 text-muted-foreground italic text-[0.9em]">
-          {quoteLines.map((ql, qi) => <span key={qi}>{renderInline(ql)}{qi < quoteLines.length - 1 && <br />}</span>)}
+          {quoteLines.map((ql, qi) => <span key={qi}>{renderInline(ql, membersByName)}{qi < quoteLines.length - 1 && <br />}</span>)}
         </blockquote>
       );
     } else {
-      nodes.push(<span key={i}>{renderInline(line)}</span>);
+      nodes.push(<span key={i}>{renderInline(line, membersByName)}</span>);
       i++;
       if (i < lines.length) nodes.push(<br key={`br-${i}`} />);
     }
@@ -85,7 +99,7 @@ function MarkdownBody({ text, className }: { text: string; className?: string })
   return <div className={className}>{nodes}</div>;
 }
 
-function MessageBody({ body, attachments, isOwn }: { body: string; attachments: Attachment[]; isOwn: boolean }) {
+function MessageBody({ body, attachments, isOwn, membersByName }: { body: string; attachments: Attachment[]; isOwn: boolean; membersByName?: Record<string, string> }) {
   const isLong = body.length > 500;
   const [expanded, setExpanded] = useState(false);
 
@@ -97,7 +111,7 @@ function MessageBody({ body, attachments, isOwn }: { body: string; attachments: 
         : "bg-muted/70 text-foreground rounded-tl-sm",
     )}>
       <div className="relative">
-        <MarkdownBody text={body} className={cn(
+        <MarkdownBody text={body} membersByName={membersByName} className={cn(
           "break-words",
           isLong && !expanded && "line-clamp-6"
         )} />
@@ -188,11 +202,13 @@ export function MessageBubble({
   message,
   prevMessage,
   currentUserId,
+  membersByName,
   onReply,
 }: {
   message: ChatMessageData;
   prevMessage?: ChatMessageData;
   currentUserId: string;
+  membersByName?: Record<string, string>;
   onReply?: (id: string) => void;
 }) {
   const router = useRouter();
@@ -280,7 +296,7 @@ export function MessageBubble({
           <InlineEdit messageId={message.id} initialBody={message.body} onDone={() => setEditing(false)} />
         ) : (
           <>
-            <MessageBody body={message.body} attachments={message.attachments} isOwn={isOwn} />
+            <MessageBody body={message.body} attachments={message.attachments} isOwn={isOwn} membersByName={membersByName} />
             {message.editedAt && (
               <span className="text-[9px] text-muted-foreground/50 mt-0.5 ml-1 select-none">(edited)</span>
             )}
