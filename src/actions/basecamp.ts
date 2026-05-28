@@ -2127,6 +2127,40 @@ export async function backfillCampfire(): Promise<CampfireBackfillResult> {
   return { messagesImported, chatsCreated, projectsProcessed: projects.length - projectsSkipped, projectsSkipped, errors };
 }
 
+// ── Diagnostic: sample raw campfire content from Basecamp ───────────────────
+export async function debugCampfireContent(): Promise<{ projectId: string; lines: { id: number; rawContent: string; converted: string }[] }> {
+  const { token, accountId } = await getBasecampCredentials();
+  const ctx = await syncCurrentIdentity();
+  if (!ctx?.org) throw new Error("No active organization");
+  const { org } = ctx as { org: NonNullable<typeof ctx.org> };
+
+  const projects = await db.project.findMany({
+    where: { id: { startsWith: "bc-" }, organizationId: org.id },
+    select: { id: true },
+    take: 10,
+  });
+
+  for (const project of projects) {
+    const bcProjectId = parseInt(project.id.replace("bc-", ""), 10);
+    try {
+      const bcProject = await bcFetch<BCProject>(`/projects/${bcProjectId}.json`, token, accountId);
+      const chatDock = bcProject.dock.find((d) => d.name === "chat");
+      if (!chatDock) continue;
+      const linesUrl = chatDock.url.replace(/\.json$/, "/lines.json");
+      const lines = await bcFetchFullUrl<BCLine>(linesUrl, token);
+      const sample = lines.slice(0, 10).map((l) => ({
+        id: l.id,
+        rawContent: l.content ?? "",
+        converted: htmlToMarkdown(l.content ?? ""),
+      }));
+      if (sample.length > 0) return { projectId: project.id, lines: sample };
+    } catch {
+      continue;
+    }
+  }
+  return { projectId: "", lines: [] };
+}
+
 // ── Basecamp private ping (DM) importer ──────────────────────────────────────
 //
 // In Basecamp 3, private messages are called "Pings". They are buckets (like
