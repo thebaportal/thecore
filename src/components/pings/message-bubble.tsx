@@ -50,6 +50,41 @@ function AttachmentList({ attachments }: { attachments: Attachment[] }) {
   );
 }
 
+function renderInline(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
+
+function MarkdownBody({ text, className }: { text: string; className?: string }) {
+  const lines = text.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i]!;
+    if (line.startsWith("> ")) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && lines[i]!.startsWith("> ")) {
+        quoteLines.push(lines[i]!.slice(2));
+        i++;
+      }
+      nodes.push(
+        <blockquote key={i} className="border-l-2 border-muted-foreground/40 pl-2 my-1 text-muted-foreground italic text-[0.9em]">
+          {quoteLines.map((ql, qi) => <span key={qi}>{renderInline(ql)}{qi < quoteLines.length - 1 && <br />}</span>)}
+        </blockquote>
+      );
+    } else {
+      nodes.push(<span key={i}>{renderInline(line)}</span>);
+      i++;
+      if (i < lines.length) nodes.push(<br key={`br-${i}`} />);
+    }
+  }
+  return <div className={className}>{nodes}</div>;
+}
+
 function MessageBody({ body, attachments, isOwn }: { body: string; attachments: Attachment[]; isOwn: boolean }) {
   const isLong = body.length > 500;
   const [expanded, setExpanded] = useState(false);
@@ -62,12 +97,10 @@ function MessageBody({ body, attachments, isOwn }: { body: string; attachments: 
         : "bg-muted/70 text-foreground rounded-tl-sm",
     )}>
       <div className="relative">
-        <p className={cn(
-          "whitespace-pre-wrap break-words",
+        <MarkdownBody text={body} className={cn(
+          "break-words",
           isLong && !expanded && "line-clamp-6"
-        )}>
-          {body}
-        </p>
+        )} />
         {isLong && !expanded && (
           <div className={cn(
             "absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t to-transparent pointer-events-none",

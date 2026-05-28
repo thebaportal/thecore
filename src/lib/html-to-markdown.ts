@@ -61,7 +61,7 @@ export function htmlToMarkdown(html: string): string {
   // ── Basecamp-specific elements ───────────────────────────────────────────
   // @mentions: <bc-attachment content-type="application/vnd.basecamp.mention">Name</bc-attachment>
   md = md.replace(
-    /<bc-attachment[^>]*content-type="application\/vnd\.basecamp\.mention"[^>]*>([\s\S]*?)<\/bc-attachment>/gi,
+    /<bc-attachment[^>]*content-type=["']application\/vnd\.basecamp\.mention["'][^>]*>([\s\S]*?)<\/bc-attachment>/gi,
     (_, inner: string) => {
       const name = inner.replace(/<[^>]+>/g, "").trim();
       return name ? `**@${name}**` : "";
@@ -70,7 +70,7 @@ export function htmlToMarkdown(html: string): string {
 
   // Quoted campfire replies: <bc-attachment content-type="...recording-line">quoted text</bc-attachment>
   md = md.replace(
-    /<bc-attachment[^>]*content-type="application\/vnd\.basecamp\.3\.recording-line"[^>]*>([\s\S]*?)<\/bc-attachment>/gi,
+    /<bc-attachment[^>]*content-type=["']application\/vnd\.basecamp\.3\.recording-line["'][^>]*>([\s\S]*?)<\/bc-attachment>/gi,
     (_, inner: string) => {
       const text = inner.replace(/<[^>]+>/g, "").trim();
       return text ? `> ${text}\n\n` : "";
