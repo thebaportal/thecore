@@ -842,24 +842,12 @@ function CampfireBackfill() {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ messagesImported: number; chatsCreated: number; projectsProcessed: number; projectsSkipped: number; errors: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [debugData, setDebugData] = useState<{ projectId: string; lines: { id: number; rawContent: string; converted: string }[] } | null>(null);
-  const [debugPending, startDebugTransition] = useTransition();
-
   function run() {
     setError(null);
     startTransition(async () => {
       try {
         const { backfillCampfire } = await import("@/actions/basecamp");
         setResult(await backfillCampfire());
-      } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    });
-  }
-
-  function runDebug() {
-    startDebugTransition(async () => {
-      try {
-        const { debugCampfireContent } = await import("@/actions/basecamp");
-        setDebugData(await debugCampfireContent());
       } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     });
   }
@@ -873,14 +861,9 @@ function CampfireBackfill() {
             Imports Basecamp Campfire messages into each project&apos;s Messages tab. Run this once after importing your projects.
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={runDebug} disabled={debugPending} className="gap-1.5 text-xs">
-            {debugPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Debug content"}
-          </Button>
-          <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
-            {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
-          </Button>
-        </div>
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+          {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
+        </Button>
       </div>
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
@@ -893,21 +876,8 @@ function CampfireBackfill() {
       {result && result.errors.length > 0 && (
         <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>
       )}
-      {!result && !error && !debugData && (
+      {!result && !error && (
         <div className="px-5 py-6 text-center text-sm text-muted-foreground">Safe to run multiple times — existing messages are updated.</div>
-      )}
-      {debugData && (
-        <div className="px-5 py-4 border-t border-border space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sample raw content — project {debugData.projectId}</p>
-          {debugData.lines.map((l) => (
-            <div key={l.id} className="space-y-1">
-              <p className="text-[10px] font-mono text-muted-foreground">Line {l.id} — RAW:</p>
-              <pre className="text-[10px] font-mono bg-muted rounded p-2 whitespace-pre-wrap break-all">{l.rawContent || "(empty)"}</pre>
-              <p className="text-[10px] font-mono text-muted-foreground">→ CONVERTED:</p>
-              <pre className="text-[10px] font-mono bg-muted rounded p-2 whitespace-pre-wrap break-all">{l.converted || "(empty)"}</pre>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );
