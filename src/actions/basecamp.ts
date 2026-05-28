@@ -613,6 +613,47 @@ async function resolveBasecampUser(
   }
 }
 
+// ── Explicit project people import ───────────────────────────────────────────
+// Calls the Basecamp people-on-project endpoint and upserts ProjectMember rows.
+// Runs after the project row is created; non-fatal if it fails.
+
+async function importProjectPeopleFromBC(
+  bcProjectId: number,
+  dbProjectId: string,
+  token: string,
+  accountId: string,
+  orgId: string,
+  fallbackUserId: string,
+): Promise<{ added: number; errors: string[] }> {
+  const errors: string[] = [];
+  let added = 0;
+  try {
+    const bcPeople = await bcFetchAll<{ id: number; name: string; email_address: string }>(
+      `/projects/${bcProjectId}/people.json`,
+      token,
+      accountId,
+    );
+    for (const person of bcPeople) {
+      try {
+        const userId = await resolveBasecampUser(person, orgId, fallbackUserId);
+        const exists = await db.projectMember.findUnique({
+          where: { projectId_userId: { projectId: dbProjectId, userId } },
+          select: { id: true },
+        });
+        if (!exists) {
+          await db.projectMember.create({ data: { projectId: dbProjectId, userId } });
+          added++;
+        }
+      } catch (e) {
+        errors.push(`person ${person.id} (${person.name}): ${String(e)}`);
+      }
+    }
+  } catch (e) {
+    errors.push(`Could not fetch project people from Basecamp: ${String(e)}`);
+  }
+  return { added, errors };
+}
+
 export async function importBasecampProject(bcProjectId: number): Promise<ImportResult> {
   const { token, accountId } = await getBasecampCredentials();
 
@@ -693,6 +734,17 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
     }
 
     phases.push({ phase: "Project", status: "ok" });
+
+    // Import explicit Basecamp project people — non-fatal if it fails
+    try {
+      const { added: membersAdded, errors: memberErrors } =
+        await importProjectPeopleFromBC(bcProjectId, project.id, token, accountId, org.id, user.id);
+      log(`People: ${membersAdded} members added from Basecamp project people list`);
+      // Soft-warn only — don't block the import
+      for (const me of memberErrors) errors.push(`⚠ People: ${me}`);
+    } catch (e) {
+      log(`People fetch non-fatal error: ${String(e)}`);
+    }
   } catch (e) {
     const msg = `Failed to create project in DB: ${String(e)}`;
     log(`ERROR: ${msg}`);
@@ -1808,9 +1860,10 @@ export type ProjectMemberBackfillResult = {
 };
 
 export async function backfillProjectMembers(): Promise<ProjectMemberBackfillResult> {
+  const { token, accountId } = await getBasecampCredentials();
   const ctx = await syncCurrentIdentity();
   if (!ctx?.org) throw new Error("No active organization");
-  const { org } = ctx as { user: NonNullable<typeof ctx.user>; org: NonNullable<typeof ctx.org> };
+  const { user, org } = ctx as { user: NonNullable<typeof ctx.user>; org: NonNullable<typeof ctx.org> };
 
   const projects = await db.project.findMany({
     where: { id: { startsWith: "bc-" }, organizationId: org.id },
@@ -1821,25 +1874,21 @@ export async function backfillProjectMembers(): Promise<ProjectMemberBackfillRes
   const errors: string[] = [];
 
   for (const project of projects) {
+    const bcProjectId = parseInt(project.id.replace("bc-", ""), 10);
     try {
-      // Collect all user IDs who touched this project
+      // 1. Explicit people list from Basecamp API (catches members with no activity)
+      const { added: bcAdded, errors: bcErrors } = await importProjectPeopleFromBC(
+        bcProjectId, project.id, token, accountId, org.id, user.id
+      );
+      membershipsCreated += bcAdded;
+      errors.push(...bcErrors);
+
+      // 2. Also infer from imported content (catches anyone who posted but isn't on the list)
       const [taskRows, messageRows, docRows, fileRows] = await Promise.all([
-        db.task.findMany({
-          where: { projectId: project.id },
-          select: { creatorId: true, assigneeId: true },
-        }),
-        db.projectPost.findMany({
-          where: { projectId: project.id },
-          select: { authorId: true },
-        }),
-        db.doc.findMany({
-          where: { projectId: project.id },
-          select: { authorId: true },
-        }),
-        db.projectFile.findMany({
-          where: { projectId: project.id },
-          select: { uploadedById: true },
-        }),
+        db.task.findMany({ where: { projectId: project.id }, select: { creatorId: true, assigneeId: true } }),
+        db.projectPost.findMany({ where: { projectId: project.id }, select: { authorId: true } }),
+        db.doc.findMany({ where: { projectId: project.id }, select: { authorId: true } }),
+        db.projectFile.findMany({ where: { projectId: project.id }, select: { uploadedById: true } }),
       ]);
 
       const userIds = new Set<string>();
@@ -1858,9 +1907,7 @@ export async function backfillProjectMembers(): Promise<ProjectMemberBackfillRes
             select: { id: true },
           });
           if (!existing) {
-            await db.projectMember.create({
-              data: { projectId: project.id, userId },
-            });
+            await db.projectMember.create({ data: { projectId: project.id, userId } });
             membershipsCreated++;
           }
         } catch (e) {
