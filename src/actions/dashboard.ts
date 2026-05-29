@@ -83,6 +83,7 @@ export async function getDashboardData() {
         organizationId: org.id,
         type: { in: ["DIRECT", "GROUP"] },
         participants: { some: { userId: user.id } },
+        messages: { some: { deletedAt: null } },
       },
       orderBy: { updatedAt: "desc" },
       take: 4,

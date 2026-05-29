@@ -323,9 +323,9 @@ export default async function DashboardPage() {
                 const lastMsg = ping.messages[0];
                 const other   = ping.participants.find((p) => p.user.id !== user.id);
                 const name =
-                  ping.type === "DIRECT" ? (other?.user.name ?? "Direct Message") :
-                  ping.type === "GROUP"  ? (ping.title ?? "Group") :
-                  ping.task?.title ?? ping.project?.name ?? "Conversation";
+                  ping.type === "DIRECT"
+                    ? (other?.user.name ?? "Direct Message")
+                    : ping.project?.name ?? ping.task?.title ?? ping.title ?? "Conversation";
                 const me       = ping.participants.find((p) => p.user.id === user.id) as { lastReadAt?: Date | null } | undefined;
                 const isUnread = !!lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
                 return (
@@ -510,9 +510,9 @@ export default async function DashboardPage() {
                 const lastMsg = ping.messages[0];
                 const other   = ping.participants.find((p) => p.user.id !== user.id);
                 const name =
-                  ping.type === "DIRECT" ? (other?.user.name ?? "Direct Message") :
-                  ping.type === "GROUP"  ? (ping.title ?? "Group") :
-                  ping.task?.title ?? ping.project?.name ?? "Conversation";
+                  ping.type === "DIRECT"
+                    ? (other?.user.name ?? "Direct Message")
+                    : ping.project?.name ?? ping.task?.title ?? ping.title ?? "Conversation";
                 const me       = ping.participants.find((p) => p.user.id === user.id) as { lastReadAt?: Date | null } | undefined;
                 const isUnread = !!lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
 
