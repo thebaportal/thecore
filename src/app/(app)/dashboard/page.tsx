@@ -15,19 +15,13 @@ import { getDashboardData } from "@/actions/dashboard";
 import { getActivityFeed, type ActivityItem } from "@/actions/activity";
 import { ProjectCard } from "@/components/projects/project-card";
 import { AIBriefingCard } from "@/components/dashboard/ai-briefing-card";
+import { Greeting } from "@/components/dashboard/greeting";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getGreeting(name: string) {
-  const hour  = new Date().getHours();
-  const first = name.split(" ")[0] ?? name;
-  if (hour < 12) return `Good morning, ${first}`;
-  if (hour < 17) return `Good afternoon, ${first}`;
-  return `Good evening, ${first}`;
-}
 
 type DeliverableStatus = "NOT_SUBMITTED" | "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REVISION_NEEDED";
 
@@ -133,7 +127,7 @@ export default async function DashboardPage() {
     return (
       <div className="max-w-2xl space-y-10 pb-16">
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-          {getGreeting(user.name)}
+          <Greeting name={user.name} />
         </h1>
 
         {projectIds.length === 0 && (
@@ -446,7 +440,7 @@ export default async function DashboardPage() {
           {format(now, "EEEE, MMMM d")} · {data.orgName}
         </p>
         <h1 className="text-lg font-semibold text-foreground mt-0.5">
-          {getGreeting(user.name)}
+          <Greeting name={user.name} />
         </h1>
       </div>
 

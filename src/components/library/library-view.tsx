@@ -545,9 +545,6 @@ export function LibraryView({
 
         {isAdmin && (
           <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => setImportOpen(true)}>
-              Import
-            </Button>
             <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => setCreatingFolder(true)}>
               <FolderPlus className="w-3.5 h-3.5" />
               New Folder

@@ -81,14 +81,14 @@ export function Topbar({
                 New
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onSelect={() => setProjectOpen(true)}>
+                <DropdownMenuItem onClick={() => setProjectOpen(true)}>
                   New Project
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setTaskOpen(true)}>
+                <DropdownMenuItem onClick={() => setTaskOpen(true)}>
                   New Task
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setPingOpen(true)}>
+                <DropdownMenuItem onClick={() => setPingOpen(true)}>
                   New Message
                 </DropdownMenuItem>
               </DropdownMenuContent>
