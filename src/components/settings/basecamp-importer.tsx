@@ -490,6 +490,38 @@ function ResultCard({ id, status, name }: { id: number; status: RunStatus; name:
   );
 }
 
+// ── Collapsible card wrapper (shared by all backfill tools) ───────────────────
+
+function CollapsibleCard({
+  title, description, action, children, cardClassName,
+}: {
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
+  cardClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={cn("rounded-xl border bg-card overflow-hidden", cardClassName ?? "border-border")}>
+      <div className="px-5 py-3.5 flex items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-2.5 flex-1 text-left min-w-0"
+        >
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200", open && "rotate-180")} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{description}</p>
+          </div>
+        </button>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      {open && children && <div className="border-t border-border">{children}</div>}
+    </div>
+  );
+}
+
 // ── Unarchive fix card ────────────────────────────────────────────────────────
 
 function UnarchiveFix() {
@@ -506,22 +538,16 @@ function UnarchiveFix() {
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/60 overflow-hidden">
-      <div className="px-5 py-4 border-b border-amber-200 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold text-amber-900">Fix: Projects hidden in Active view</h2>
-          <p className="text-xs text-amber-800 mt-0.5">
-            Projects imported from archived Basecamp projects were marked ARCHIVED in The Core and are invisible in the default Projects view. This resets them all to Active so they're visible.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending || result?.fixed === 0} className="shrink-0 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white border-0">
-          {isPending
-            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fixing…</>
-            : result
-            ? result.fixed === 0 ? "Nothing to fix" : <><RefreshCw className="w-3.5 h-3.5" /> Run again</>
-            : "Fix now"}
+    <CollapsibleCard
+      title="Fix: Projects hidden in Active view"
+      description="Projects imported from Basecamp archives were marked ARCHIVED and are hidden from the default Projects view. Resets them all to Active."
+      cardClassName="border-amber-200 bg-amber-50/60"
+      action={
+        <Button size="sm" onClick={run} disabled={isPending || result?.fixed === 0} className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white border-0">
+          {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fixing…</> : result ? (result.fixed === 0 ? "Nothing to fix" : <><RefreshCw className="w-3.5 h-3.5" /> Run again</>) : "Fix now"}
         </Button>
-      </div>
+      }
+    >
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="px-5 py-4 text-sm">
@@ -530,7 +556,7 @@ function UnarchiveFix() {
             : <p className="text-muted-foreground">No archived imported projects found — nothing to fix.</p>}
         </div>
       )}
-    </div>
+    </CollapsibleCard>
   );
 }
 
@@ -544,62 +570,31 @@ function MandateBackfill() {
   function run() {
     setError(null);
     startTransition(async () => {
-      try {
-        const r = await backfillProjectMandates();
-        setResult(r);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      }
+      try { setResult(await backfillProjectMandates()); }
+      catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     });
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Populate Project Mandates</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Fills the Project Mandate tab for all already-imported projects — no re-import needed.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
-          {isPending
-            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</>
-            : result
-            ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</>
-            : "Run backfill"}
+    <CollapsibleCard
+      title="Populate Project Mandates"
+      description="Fills the Project Mandate tab for all already-imported projects — no re-import needed."
+      action={
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
+          {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
         </Button>
-      </div>
-
-      {error && (
-        <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive">
-          <AlertCircle className="w-4 h-4 shrink-0" /> {error}
-        </div>
-      )}
-
+      }
+    >
+      {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="grid grid-cols-3 divide-x divide-border">
-          <div className="px-5 py-3 text-center">
-            <p className="text-xl font-semibold text-emerald-600">{result.filled}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Filled</p>
-          </div>
-          <div className="px-5 py-3 text-center">
-            <p className="text-xl font-semibold text-foreground">{result.skipped}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Already had mandate</p>
-          </div>
-          <div className="px-5 py-3 text-center">
-            <p className="text-xl font-semibold text-foreground">{result.total}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Total projects</p>
-          </div>
+          <div className="px-5 py-3 text-center"><p className="text-xl font-semibold text-emerald-600">{result.filled}</p><p className="text-xs text-muted-foreground mt-0.5">Filled</p></div>
+          <div className="px-5 py-3 text-center"><p className="text-xl font-semibold text-foreground">{result.skipped}</p><p className="text-xs text-muted-foreground mt-0.5">Already had mandate</p></div>
+          <div className="px-5 py-3 text-center"><p className="text-xl font-semibold text-foreground">{result.total}</p><p className="text-xs text-muted-foreground mt-0.5">Total projects</p></div>
         </div>
       )}
-
-      {!result && !error && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">
-          Uses the project description and any vault doc named &quot;Project Mandate&quot; already in the database.
-        </div>
-      )}
-    </div>
+      {!result && !error && <div className="px-5 py-4 text-center text-sm text-muted-foreground">Uses the project description and any vault doc named &quot;Project Mandate&quot; already in the database.</div>}
+    </CollapsibleCard>
   );
 }
 
@@ -619,18 +614,15 @@ function MessageBoardBackfill() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Import Message Board Posts</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pulls Basecamp message board posts into the Posts section for all already-imported projects.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+    <CollapsibleCard
+      title="Import Message Board Posts"
+      description="Pulls Basecamp message board posts into the Posts section for all already-imported projects."
+      action={
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
           {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
         </Button>
-      </div>
+      }
+    >
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="grid grid-cols-4 divide-x divide-border">
@@ -640,17 +632,13 @@ function MessageBoardBackfill() {
           <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-muted-foreground">{result.projectsSkipped}</p><p className="text-xs text-muted-foreground mt-0.5">No board</p></div>
         </div>
       )}
-      {result && result.errors.length > 0 && (
-        <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>
-      )}
-      {!result && !error && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">Runs against already-imported projects — no full re-import needed.</div>
-      )}
-    </div>
+      {result && result.errors.length > 0 && <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>}
+      {!result && !error && <div className="px-5 py-4 text-center text-sm text-muted-foreground">Runs against already-imported projects — no full re-import needed.</div>}
+    </CollapsibleCard>
   );
 }
 
-// ── Private pings importer card ───────────────────────────────────────────────
+// ── Clear imported pings card ─────────────────────────────────────────────────
 
 function ClearImportedPings({ onClear }: { onClear: () => Promise<{ deleted: number }> }) {
   const [isPending, startTransition] = useTransition();
@@ -666,27 +654,23 @@ function ClearImportedPings({ onClear }: { onClear: () => Promise<{ deleted: num
   }
 
   return (
-    <div className="rounded-xl border border-destructive/30 bg-card overflow-hidden">
-      <div className="px-5 py-4 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Clear Imported Messages</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Removes all Basecamp-imported conversations from Messages. Use this to clean up failed or unwanted imports. Cannot be undone.
-          </p>
-        </div>
-        <Button size="sm" variant="destructive" onClick={run} disabled={isPending} className="shrink-0">
+    <CollapsibleCard
+      title="Clear Imported Messages"
+      description="Removes all Basecamp-imported conversations from Messages. Cannot be undone."
+      cardClassName="border-destructive/30"
+      action={
+        <Button size="sm" variant="destructive" onClick={run} disabled={isPending}>
           {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Clearing…</> : "Clear"}
         </Button>
-      </div>
-      {error && <div className="px-5 py-3 border-t border-border flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
-      {result && !error && (
-        <div className="px-5 py-3 border-t border-border">
-          <p className="text-sm text-emerald-600 font-medium">{result.deleted} conversation{result.deleted !== 1 ? "s" : ""} removed.</p>
-        </div>
-      )}
-    </div>
+      }
+    >
+      {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
+      {result && !error && <div className="px-5 py-3"><p className="text-sm text-emerald-600 font-medium">{result.deleted} conversation{result.deleted !== 1 ? "s" : ""} removed.</p></div>}
+    </CollapsibleCard>
   );
 }
+
+// ── Private pings importer card ───────────────────────────────────────────────
 
 function PrivatePingsImport() {
   const [isPending, startTransition] = useTransition();
@@ -702,18 +686,15 @@ function PrivatePingsImport() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Import Private Messages (Pings)</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Imports your Basecamp private 1-on-1 and group DMs into the Messages section. Only chats the connected account participated in are accessible.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+    <CollapsibleCard
+      title="Import Private Messages (Pings)"
+      description="Imports your Basecamp private 1-on-1 and group DMs. Only chats the connected account participated in are accessible."
+      action={
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
           {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
         </Button>
-      </div>
+      }
+    >
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="grid grid-cols-3 divide-x divide-border">
@@ -725,20 +706,12 @@ function PrivatePingsImport() {
       {result && result.errors.length > 0 && (
         <div className="px-5 py-3 border-t border-border space-y-1">
           <p className="text-xs font-medium text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""}:</p>
-          {result.errors.slice(0, 10).map((e, i) => (
-            <p key={i} className="text-xs text-amber-700 font-mono break-all">{e}</p>
-          ))}
-          {result.errors.length > 10 && (
-            <p className="text-xs text-muted-foreground">…and {result.errors.length - 10} more</p>
-          )}
+          {result.errors.slice(0, 10).map((e, i) => <p key={i} className="text-xs text-amber-700 font-mono break-all">{e}</p>)}
+          {result.errors.length > 10 && <p className="text-xs text-muted-foreground">…and {result.errors.length - 10} more</p>}
         </div>
       )}
-      {!result && !error && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">
-          Safe to run multiple times — existing conversations are skipped, but any missing messages will be backfilled.
-        </div>
-      )}
-    </div>
+      {!result && !error && <div className="px-5 py-4 text-center text-sm text-muted-foreground">Safe to run multiple times — existing conversations are skipped.</div>}
+    </CollapsibleCard>
   );
 }
 
@@ -758,18 +731,15 @@ function TodosBackfill() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Import To-dos as Tasks</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pulls Basecamp to-do lists into Tasks for all already-imported projects. Adds list name as prefix and resolves assignees.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+    <CollapsibleCard
+      title="Import To-dos as Tasks"
+      description="Pulls Basecamp to-do lists into Tasks for all already-imported projects. Adds list name as prefix and resolves assignees."
+      action={
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
           {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
         </Button>
-      </div>
+      }
+    >
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="grid grid-cols-4 divide-x divide-border">
@@ -779,13 +749,9 @@ function TodosBackfill() {
           <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-muted-foreground">{result.projectsSkipped}</p><p className="text-xs text-muted-foreground mt-0.5">No to-dos</p></div>
         </div>
       )}
-      {result && result.errors.length > 0 && (
-        <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>
-      )}
-      {!result && !error && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">Runs against already-imported projects — no full re-import needed.</div>
-      )}
-    </div>
+      {result && result.errors.length > 0 && <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>}
+      {!result && !error && <div className="px-5 py-4 text-center text-sm text-muted-foreground">Runs against already-imported projects — no full re-import needed.</div>}
+    </CollapsibleCard>
   );
 }
 
@@ -807,18 +773,15 @@ function ProjectMembersBackfill() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Add Members to Projects</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Assigns people to projects based on who created tasks, wrote messages, authored docs, or uploaded files. Populates the Team page grouped by project.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+    <CollapsibleCard
+      title="Add Members to Projects"
+      description="Assigns people to projects based on who created tasks, wrote messages, authored docs, or uploaded files."
+      action={
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
           {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
         </Button>
-      </div>
+      }
+    >
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="grid grid-cols-2 divide-x divide-border">
@@ -826,13 +789,9 @@ function ProjectMembersBackfill() {
           <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-foreground">{result.projectsProcessed}</p><p className="text-xs text-muted-foreground mt-0.5">Projects scanned</p></div>
         </div>
       )}
-      {result && result.errors.length > 0 && (
-        <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>
-      )}
-      {!result && !error && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">Safe to run multiple times — existing memberships are skipped.</div>
-      )}
-    </div>
+      {result && result.errors.length > 0 && <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>}
+      {!result && !error && <div className="px-5 py-4 text-center text-sm text-muted-foreground">Safe to run multiple times — existing memberships are skipped.</div>}
+    </CollapsibleCard>
   );
 }
 
@@ -842,6 +801,7 @@ function CampfireBackfill() {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ messagesImported: number; chatsCreated: number; projectsProcessed: number; projectsSkipped: number; errors: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
   function run() {
     setError(null);
     startTransition(async () => {
@@ -853,18 +813,15 @@ function CampfireBackfill() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Import Project Campfire Chats</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Imports Basecamp Campfire messages into each project&apos;s Messages tab. Run this once after importing your projects.
-          </p>
-        </div>
-        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5 shrink-0">
+    <CollapsibleCard
+      title="Import Project Campfire Chats"
+      description="Imports Basecamp Campfire messages into each project's Messages tab. Run once after importing projects."
+      action={
+        <Button size="sm" onClick={run} disabled={isPending} className="gap-1.5">
           {isPending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Running…</> : result ? <><RefreshCw className="w-3.5 h-3.5" /> Run again</> : "Run"}
         </Button>
-      </div>
+      }
+    >
       {error && <div className="px-5 py-3 flex items-center gap-2 text-sm text-destructive"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</div>}
       {result && !error && (
         <div className="grid grid-cols-3 divide-x divide-border">
@@ -873,13 +830,9 @@ function CampfireBackfill() {
           <div className="px-4 py-3 text-center"><p className="text-xl font-semibold text-foreground">{result.projectsProcessed}</p><p className="text-xs text-muted-foreground mt-0.5">Projects processed</p></div>
         </div>
       )}
-      {result && result.errors.length > 0 && (
-        <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>
-      )}
-      {!result && !error && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">Safe to run multiple times — existing messages are updated.</div>
-      )}
-    </div>
+      {result && result.errors.length > 0 && <div className="px-5 py-3 border-t border-border text-xs text-amber-700">{result.errors.length} error{result.errors.length > 1 ? "s" : ""} — check server logs</div>}
+      {!result && !error && <div className="px-5 py-4 text-center text-sm text-muted-foreground">Safe to run multiple times — existing messages are updated.</div>}
+    </CollapsibleCard>
   );
 }
 
