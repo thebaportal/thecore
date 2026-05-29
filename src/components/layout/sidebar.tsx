@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   Home, FolderKanban, CheckSquare,
   Activity, Users2, Settings, ChevronLeft, ChevronRight,
-  BookOpen, LayoutTemplate, MessageCircle,
+  BookOpen, LayoutTemplate, MessageCircle, HelpCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { UserButton } from "@clerk/nextjs";
@@ -145,6 +145,7 @@ export function Sidebar({
             <SectionLabel label="System" collapsed={collapsed} />
             <NavItem href="/activity"  label="Activity"  icon={Activity}       collapsed={collapsed} onClick={onClose} />
             <NavItem href="/settings"  label="Settings"  icon={Settings}       collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/help"      label="Help"       icon={HelpCircle}     collapsed={collapsed} onClick={onClose} />
           </>
         )}
       </nav>

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Core — User Guide</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:        #0f172a;
+    --ink-muted:  #475569;
+    --ink-light:  #94a3b8;
+    --accent:     #1e40af;
+    --accent-bg:  #eff6ff;
+    --accent-bdr: #bfdbfe;
+    --tip-bg:     #f0fdf4;
+    --tip-bdr:    #bbf7d0;
+    --tip-ink:    #14532d;
+    --border:     #e2e8f0;
+    --surface:    #f8fafc;
+    --white:      #ffffff;
+    --font:       'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono:       'Cascadia Code', 'Fira Mono', 'Consolas', monospace;
+  }
+
+  html { font-size: 10pt; }
+
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--white);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Page layout ── */
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 40px 72px;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    min-height: 260px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 32px;
+    margin-bottom: 48px;
+    page-break-after: avoid;
+  }
+
+  .cover-label {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .cover h1 {
+    font-size: 30pt;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+
+  .cover-subtitle {
+    font-size: 11pt;
+    color: var(--ink-muted);
+    max-width: 520px;
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  .cover-meta {
+    display: flex;
+    gap: 24px;
+    font-size: 8pt;
+    color: var(--ink-light);
+    margin-top: auto;
+  }
+
+  .cover-meta span strong { color: var(--ink-muted); font-weight: 600; }
+
+  /* ── Table of contents ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+    page-break-inside: avoid;
+  }
+
+  .toc-title {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 12px;
+  }
+
+  .toc ol {
+    list-style: none;
+    columns: 2;
+    column-gap: 32px;
+  }
+
+  .toc li {
+    font-size: 9.5pt;
+    padding: 3px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    break-inside: avoid;
+  }
+
+  .toc li::before {
+    content: attr(data-n);
+    font-size: 8pt;
+    color: var(--ink-light);
+    width: 16px;
+    flex-shrink: 0;
+  }
+
+  .toc a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  /* ── Sections ── */
+  section { margin-bottom: 44px; }
+
+  h2 {
+    font-size: 15pt;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -.02em;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid var(--border);
+    margin-bottom: 18px;
+    page-break-after: avoid;
+  }
+
+  h2 .num {
+    color: var(--accent);
+    font-weight: 800;
+    margin-right: 8px;
+  }
+
+  h3 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 20px 0 10px;
+    page-break-after: avoid;
+  }
+
+  p {
+    font-size: 9.5pt;
+    color: var(--ink-muted);
+    margin-bottom: 10px;
+    max-width: 640px;
+  }
+
+  /* ── Ordered steps ── */
+  ol.steps {
+    list-style: none;
+    counter-reset: steps;
+    margin: 10px 0 14px;
+  }
+
+  ol.steps li {
+    counter-increment: steps;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 9.5pt;
+    color: var(--ink-muted);
+    margin-bottom: 7px;
+    line-height: 1.55;
+  }
+
+  ol.steps li::before {
+    content: counter(steps);
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 8pt;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0 18px;
+    page-break-inside: avoid;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+
+  thead tr { background: var(--surface); }
+
+  th {
+    text-align: left;
+    padding: 9px 14px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 8px 14px;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: var(--surface); }
+
+  td:first-child {
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 8.5pt;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* ── Callouts ── */
+  .callout {
+    display: flex;
+    gap: 10px;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 14px 0;
+    page-break-inside: avoid;
+  }
+
+  .callout.note {
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-bdr);
+  }
+
+  .callout.tip {
+    background: var(--tip-bg);
+    border: 1px solid var(--tip-bdr);
+  }
+
+  .callout-label {
+    font-size: 8pt;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .callout.note .callout-label { color: var(--accent); }
+  .callout.tip  .callout-label { color: #166534; }
+
+  .callout p {
+    font-size: 9pt;
+    margin: 0;
+    line-height: 1.55;
+  }
+
+  .callout.note p { color: #1e3a8a; }
+  .callout.tip  p { color: var(--tip-ink); }
+
+  /* ── Bullet list ── */
+  ul.bullets {
+    list-style: none;
+    margin: 8px 0 14px;
+    padding: 0;
+  }
+
+  ul.bullets li {
+    font-size: 9.5pt;
+    color: var(--ink-muted);
+    padding: 3px 0 3px 18px;
+    position: relative;
+    line-height: 1.55;
+  }
+
+  ul.bullets li::before {
+    content: "–";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ── Print ── */
+  @media print {
+    html { font-size: 9.5pt; }
+    .page { padding: 0; max-width: 100%; }
+
+    @page {
+      size: A4;
+      margin: 20mm 22mm 24mm;
+    }
+
+    @page :first { margin-top: 28mm; }
+
+    section { page-break-inside: avoid; }
+    h2 { page-break-before: auto; }
+    h3, ol.steps, .table-wrap, .callout { page-break-inside: avoid; }
+
+    .print-hide { display: none !important; }
+  }
+
+  /* ── Print button (screen only) ── */
+  .print-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 9pt;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    transition: opacity .15s;
+  }
+
+  .print-btn:hover { opacity: .88; }
+
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+
+<button class="print-btn print-hide" onclick="window.print()">
+  ⬇ Save as PDF
+</button>
+
+<div class="page">
+
+  <!-- Cover -->
+  <div class="cover">
+    <p class="cover-label">User Guide · v1.0</p>
+    <h1>The Core</h1>
+    <p class="cover-subtitle">
+      A complete reference for managing projects, tasks, knowledge,
+      and team communication inside The Core platform.
+    </p>
+    <div class="cover-meta">
+      <span><strong>Audience:</strong> All users</span>
+      <span><strong>Role coverage:</strong> Admin · Member</span>
+      <span><strong>Version:</strong> 2026</span>
+    </div>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <p class="toc-title">Contents</p>
+    <ol>
+      <li data-n="1"><a href="#overview">Navigation Overview</a></li>
+      <li data-n="2"><a href="#projects">Projects</a></li>
+      <li data-n="3"><a href="#tasks">Tasks</a></li>
+      <li data-n="4"><a href="#inbox">Inbox &amp; Messaging</a></li>
+      <li data-n="5"><a href="#knowledge">Library &amp; Templates</a></li>
+      <li data-n="6"><a href="#team">Team &amp; People</a></li>
+      <li data-n="7"><a href="#settings">Settings &amp; Administration</a></li>
+      <li data-n="8"><a href="#tips">Tips &amp; Shortcuts</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. Navigation -->
+  <section id="overview">
+    <h2><span class="num">1</span>Navigation Overview</h2>
+    <p>
+      The sidebar provides access to every area of The Core. Collapse it to icon-only
+      mode using the <strong>‹</strong> toggle at the right edge of the sidebar.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Section</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Home</td><td>Personal dashboard with activity feed and quick links</td></tr>
+          <tr><td>Projects</td><td>All active projects within your organisation</td></tr>
+          <tr><td>My Tasks</td><td>Every task assigned to you, across all projects</td></tr>
+          <tr><td>Inbox</td><td>Direct messages and project group chats</td></tr>
+          <tr><td>Library</td><td>Shared documents and files for the whole organisation</td></tr>
+          <tr><td>Templates</td><td>Reusable document templates (Admin-managed)</td></tr>
+          <tr><td>Team</td><td>All members in your organisation</td></tr>
+          <tr><td>Activity</td><td>Live feed of all platform activity in reverse-chronological order</td></tr>
+          <tr><td>Settings</td><td>Profile, organisation settings, and Basecamp import tools</td></tr>
+          <tr><td>Help</td><td>This guide</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2. Projects -->
+  <section id="projects">
+    <h2><span class="num">2</span>Projects</h2>
+    <p>
+      Projects are the primary unit of work in The Core. Each project has its own tasks,
+      posts, group chat, file library, and team roster.
+    </p>
+
+    <h3>Opening a project</h3>
+    <ol class="steps">
+      <li>Click <strong>Projects</strong> in the sidebar.</li>
+      <li>Click any project card to open it.</li>
+      <li>Use the <strong>← All projects</strong> link at the top of the page to return to the list.</li>
+    </ol>
+
+    <h3>Project tabs</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tab</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td>Overview</td><td>Project mandate, description, status, and key metadata</td></tr>
+          <tr><td>Tasks</td><td>To-do items with assignees, priorities, and due dates</td></tr>
+          <tr><td>Posts</td><td>Long-form announcements and updates from the team</td></tr>
+          <tr><td>Messages</td><td>The project's group chat channel</td></tr>
+          <tr><td>Files</td><td>Uploaded documents organised into folders</td></tr>
+          <tr><td>Team</td><td>Members assigned to this project</td></tr>
+          <tr><td>Phases</td><td>Milestone phases with deliverables (instructor-managed)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Creating a project</h3>
+    <ol class="steps">
+      <li>Click <strong>Projects</strong> in the sidebar.</li>
+      <li>Click <strong>+ New Project</strong>.</li>
+      <li>Enter a name, description, colour, and icon.</li>
+      <li>Click <strong>Create</strong>.</li>
+    </ol>
+
+    <div class="callout note">
+      <span class="callout-label">Note</span>
+      <p>Only Admins and Owners can create and archive projects. Members can view and contribute to projects they are assigned to.</p>
+    </div>
+  </section>
+
+  <!-- 3. Tasks -->
+  <section id="tasks">
+    <h2><span class="num">3</span>Tasks</h2>
+    <p>
+      Tasks track individual pieces of work. Create them inside a project or view
+      all your assigned tasks in aggregate from <strong>My Tasks</strong>.
+    </p>
+
+    <h3>Creating a task</h3>
+    <ol class="steps">
+      <li>Open a project and go to the <strong>Tasks</strong> tab.</li>
+      <li>Click <strong>+ New Task</strong>.</li>
+      <li>Enter a title, then optionally set an assignee, priority, due date, and description.</li>
+      <li>Click <strong>Save</strong>.</li>
+    </ol>
+
+    <h3>Task priorities</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Priority</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td>Critical</td><td>Blocking — must be resolved immediately</td></tr>
+          <tr><td>High</td><td>Important — complete before lower-priority items</td></tr>
+          <tr><td>Medium</td><td>Standard priority (default)</td></tr>
+          <tr><td>Low</td><td>Nice-to-have — complete when capacity allows</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Task statuses</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>To Do</td><td>Not yet started</td></tr>
+          <tr><td>In Progress</td><td>Actively being worked on</td></tr>
+          <tr><td>In Review</td><td>Awaiting feedback or approval</td></tr>
+          <tr><td>Done</td><td>Complete</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-label">Tip</span>
+      <p>Use <strong>My Tasks</strong> in the sidebar to see every task assigned to you across all projects, sorted by due date.</p>
+    </div>
+  </section>
+
+  <!-- 4. Inbox -->
+  <section id="inbox">
+    <h2><span class="num">4</span>Inbox &amp; Messaging</h2>
+    <p>
+      The Inbox handles direct messages (DMs) and project group chats.
+      Messages support markdown formatting and AI-powered analysis.
+    </p>
+
+    <h3>Starting a direct message</h3>
+    <ol class="steps">
+      <li>Click <strong>Inbox</strong> in the sidebar.</li>
+      <li>Click the compose icon or search for a person by name.</li>
+      <li>Type your message and press <strong>Enter</strong> to send.</li>
+    </ol>
+
+    <h3>Sending a message in project chat</h3>
+    <ol class="steps">
+      <li>Open a project and go to the <strong>Messages</strong> tab.</li>
+      <li>Type your message in the input bar at the bottom.</li>
+      <li>Press <strong>Enter</strong> to send, or <strong>Shift + Enter</strong> for a new line.</li>
+    </ol>
+
+    <h3>Message actions</h3>
+    <p>Hover over any message to reveal the action toolbar:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Action</th><th>How to use</th></tr></thead>
+        <tbody>
+          <tr><td>React</td><td>Click the 😊 icon and select an emoji</td></tr>
+          <tr><td>Reply</td><td>Click Reply to quote the message in your response</td></tr>
+          <tr><td>Edit</td><td>Click the pencil icon (own messages only)</td></tr>
+          <tr><td>Delete</td><td>Click the bin icon (own messages only)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Formatting messages</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Syntax</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>**text**</code></td><td>Bold</td></tr>
+          <tr><td><code>*text*</code></td><td>Italic</td></tr>
+          <tr><td><code>&gt; text</code></td><td>Block quote</td></tr>
+          <tr><td><code>@Name</code></td><td>Mention a person — click to open their profile card</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AI tools in chat</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Button</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>Summarize</td><td>Generates a concise summary of the full conversation</td></tr>
+          <tr><td>Suggest tasks</td><td>Extracts action items and lets you add them directly as project tasks</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5. Library & Templates -->
+  <section id="knowledge">
+    <h2><span class="num">5</span>Library &amp; Templates</h2>
+    <p>
+      The Library stores shared documents accessible to the whole organisation.
+      Templates provides reusable starting points for common document types.
+    </p>
+
+    <h3>Creating a document</h3>
+    <ol class="steps">
+      <li>Click <strong>Library</strong> (or <strong>Templates</strong>) in the sidebar.</li>
+      <li>Open or create a folder by clicking <strong>+ New Folder</strong>.</li>
+      <li>Inside the folder, click <strong>+ New Document</strong>.</li>
+      <li>Write your content and click <strong>Save</strong>.</li>
+    </ol>
+
+    <h3>Using a template</h3>
+    <ol class="steps">
+      <li>Click <strong>Templates</strong> in the sidebar.</li>
+      <li>Open the relevant folder and click a template card.</li>
+      <li>Click <strong>Use Template</strong> to create a new document pre-filled with the template content.</li>
+    </ol>
+
+    <div class="callout note">
+      <span class="callout-label">Note</span>
+      <p>Templates can only be created and edited by Admins and Owners. Members can use templates but cannot modify them.</p>
+    </div>
+  </section>
+
+  <!-- 6. Team & People -->
+  <section id="team">
+    <h2><span class="num">6</span>Team &amp; People</h2>
+    <p>
+      The Team page lists every member in your organisation. Profile cards provide
+      quick access to contact information and a one-click route to messaging.
+    </p>
+
+    <h3>Viewing a profile card</h3>
+    <p>Click any avatar or @mention anywhere in the app. The profile card displays:</p>
+    <ul class="bullets">
+      <li>Full name, job title, and organisation</li>
+      <li>Bio (if the user has set one)</li>
+      <li>Number of projects the person belongs to</li>
+      <li>A <strong>Message</strong> button to start a direct message</li>
+    </ul>
+
+    <h3>Updating your profile</h3>
+    <ol class="steps">
+      <li>Click <strong>Settings</strong> in the sidebar.</li>
+      <li>Select <strong>Profile</strong>.</li>
+      <li>Update your name, job title, bio, or profile photo.</li>
+      <li>Click <strong>Save</strong>.</li>
+    </ol>
+  </section>
+
+  <!-- 7. Settings & Administration -->
+  <section id="settings">
+    <h2><span class="num">7</span>Settings &amp; Administration</h2>
+    <p>
+      Administrators have access to organisation-wide settings, including the
+      Basecamp migration pipeline for importing historical data.
+    </p>
+
+    <h3>Connecting Basecamp</h3>
+    <ol class="steps">
+      <li>Click <strong>Settings → Basecamp</strong>.</li>
+      <li>Click <strong>Connect Basecamp</strong> and authorise via OAuth.</li>
+      <li>Select the projects to import from the list.</li>
+      <li>Click <strong>Import selected</strong> and wait for the process to complete.</li>
+    </ol>
+
+    <h3>Backfill tools</h3>
+    <p>
+      Each tool is collapsed by default. Click the <strong>›</strong> chevron to expand it,
+      then click <strong>Run</strong>. All tools are safe to run multiple times.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Import Message Board Posts</td><td>Pulls Basecamp message board posts into Posts</td></tr>
+          <tr><td>Import To-dos as Tasks</td><td>Converts Basecamp to-do lists to project tasks</td></tr>
+          <tr><td>Import Project Campfire Chats</td><td>Pulls project group chat history into Messages</td></tr>
+          <tr><td>Add Members to Projects</td><td>Syncs project membership from Basecamp activity</td></tr>
+          <tr><td>Import Private Messages</td><td>Brings in Basecamp 1-on-1 and group DMs</td></tr>
+          <tr><td>Populate Project Mandates</td><td>Fills the mandate tab from project descriptions</td></tr>
+          <tr><td>Fix: Projects hidden</td><td>Resets imported-archived projects to Active</td></tr>
+          <tr><td>Clear Imported Messages</td><td>Removes all imported chat data (irreversible)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout note">
+      <span class="callout-label">Note</span>
+      <p><strong>Clear Imported Messages</strong> cannot be undone. Use it only to clean up a failed import before re-running.</p>
+    </div>
+  </section>
+
+  <!-- 8. Tips -->
+  <section id="tips">
+    <h2><span class="num">8</span>Tips &amp; Shortcuts</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Action</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>Send a message</td><td>Press <code>Enter</code> in the message input</td></tr>
+          <tr><td>New line in a message</td><td>Press <code>Shift + Enter</code></td></tr>
+          <tr><td>Collapse the sidebar</td><td>Click the <strong>‹</strong> toggle on the sidebar edge</td></tr>
+          <tr><td>View a user profile</td><td>Click any avatar or @mention</td></tr>
+          <tr><td>Mention someone in chat</td><td>Type <code>@</code> followed by their name</td></tr>
+          <tr><td>React to a message</td><td>Hover the message → click the 😊 icon</td></tr>
+          <tr><td>Edit your own message</td><td>Hover the message → click the pencil icon</td></tr>
+          <tr><td>Get an AI summary of a chat</td><td>Open any conversation → click <strong>Summarize</strong> at the top</td></tr>
+          <tr><td>Catch up after time away</td><td>Click <strong>Activity</strong> in the sidebar for a full reverse-chronological feed</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-label">Tip</span>
+      <p>
+        The <strong>Activity</strong> feed is the fastest way to catch up after time away —
+        it shows every action across all projects in reverse-chronological order.
+      </p>
+    </div>
+  </section>
+
+</div><!-- /page -->
+</body>
+</html>
