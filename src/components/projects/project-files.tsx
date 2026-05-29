@@ -12,6 +12,7 @@ import {
 import { deleteProjectFile } from "@/actions/files";
 import { createDocFolder, renameDocFolder, deleteDocFolder } from "@/actions/docs";
 import { useUploadThing } from "@/lib/uploadthing";
+import { FileTypeIcon } from "@/components/files/file-type-icon";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -78,127 +79,6 @@ function getFileBadge(mimeType: string, filename: string): FileBadge {
     return { label: "TXT", className: "bg-gray-100 text-gray-600 border-gray-200" };
   const ext = filename.split(".").pop()?.toUpperCase() ?? "FILE";
   return { label: ext, className: "bg-gray-100 text-gray-600 border-gray-200" };
-}
-
-// ─── File type SVG icons ──────────────────────────────────────────────────────
-
-function WordIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#2B579A"/>
-      <line x1="11" y1="16" x2="25" y2="16" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
-      <line x1="11" y1="21" x2="25" y2="21" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
-      <line x1="11" y1="26" x2="22" y2="26" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
-      <text x="24" y="36" textAnchor="middle" fill="white" fontSize="22" fontWeight="700" fontFamily="system-ui,Arial,sans-serif">W</text>
-    </svg>
-  );
-}
-
-function ExcelIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#217346"/>
-      <line x1="27" y1="10" x2="27" y2="38" stroke="white" strokeWidth="1" opacity="0.25"/>
-      <line x1="10" y1="21" x2="38" y2="21" stroke="white" strokeWidth="1" opacity="0.25"/>
-      <line x1="10" y1="29" x2="38" y2="29" stroke="white" strokeWidth="1" opacity="0.25"/>
-      <text x="24" y="36" textAnchor="middle" fill="white" fontSize="22" fontWeight="700" fontFamily="system-ui,Arial,sans-serif">X</text>
-    </svg>
-  );
-}
-
-function PowerPointIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#C43E1C"/>
-      <rect x="10" y="12" width="20" height="14" rx="2" stroke="white" strokeWidth="1.2" opacity="0.35"/>
-      <line x1="20" y1="26" x2="20" y2="34" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.35"/>
-      <line x1="14" y1="34" x2="26" y2="34" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.35"/>
-      <text x="24" y="36" textAnchor="middle" fill="white" fontSize="22" fontWeight="700" fontFamily="system-ui,Arial,sans-serif">P</text>
-    </svg>
-  );
-}
-
-function PdfIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#E5221C"/>
-      <line x1="10" y1="16" x2="26" y2="16" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
-      <line x1="10" y1="21" x2="24" y2="21" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.3"/>
-      <text x="24" y="36" textAnchor="middle" fill="white" fontSize="15" fontWeight="700" fontFamily="system-ui,Arial,sans-serif">PDF</text>
-    </svg>
-  );
-}
-
-function VisioIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#3955A3"/>
-      <text x="24" y="36" textAnchor="middle" fill="white" fontSize="22" fontWeight="700" fontFamily="system-ui,Arial,sans-serif">V</text>
-    </svg>
-  );
-}
-
-function VideoFileIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#7C3AED"/>
-      <polygon points="18,14 36,24 18,34" fill="white" opacity="0.9"/>
-    </svg>
-  );
-}
-
-function AudioFileIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#DB2777"/>
-      <path d="M20 13v15M20 28a5 5 0 1 0-5 5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M20 13l12-3v11" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function ImageFileIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#0284C7"/>
-      <circle cx="18" cy="19" r="4" fill="white" opacity="0.85"/>
-      <path d="M8 36l10-11 8 8 5-5 9 8H8z" fill="white" opacity="0.85"/>
-    </svg>
-  );
-}
-
-function GenericFileIcon({ className, ext }: { className?: string; ext?: string }) {
-  const fontSize = ext && ext.length > 3 ? "11" : "14";
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="8" fill="#6B7280"/>
-      {ext
-        ? <text x="24" y="31" textAnchor="middle" fill="white" fontSize={fontSize} fontWeight="700" fontFamily="system-ui,Arial,sans-serif">{ext.toUpperCase()}</text>
-        : <text x="24" y="31" textAnchor="middle" fill="white" fontSize="12" fontWeight="700" fontFamily="system-ui,Arial,sans-serif">FILE</text>
-      }
-    </svg>
-  );
-}
-
-function FileTypeIcon({ mimeType, filename, className }: { mimeType: string; filename: string; className?: string }) {
-  if (mimeType.includes("wordprocessingml") || mimeType === "application/msword")
-    return <WordIcon className={className} />;
-  if (mimeType.includes("spreadsheetml") || mimeType === "application/vnd.ms-excel")
-    return <ExcelIcon className={className} />;
-  if (mimeType.includes("presentationml") || mimeType === "application/vnd.ms-powerpoint")
-    return <PowerPointIcon className={className} />;
-  if (mimeType === "application/pdf")
-    return <PdfIcon className={className} />;
-  if (mimeType.includes("visio") || filename.toLowerCase().endsWith(".vsdx"))
-    return <VisioIcon className={className} />;
-  if (mimeType.startsWith("video/"))
-    return <VideoFileIcon className={className} />;
-  if (mimeType.startsWith("audio/"))
-    return <AudioFileIcon className={className} />;
-  if (mimeType.startsWith("image/"))
-    return <ImageFileIcon className={className} />;
-  const ext = filename.split(".").pop() ?? "";
-  return <GenericFileIcon className={className} ext={ext} />;
 }
 
 // ─── Folder card ─────────────────────────────────────────────────────────────

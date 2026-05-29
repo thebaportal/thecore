@@ -6,9 +6,10 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import {
   Plus, Trash2, Loader2, Folder, FolderOpen, FolderPlus, ChevronRight,
-  X, File, FileImage, FileVideo, FileAudio,
+  X, CloudUpload,
   Pencil, Check, AlertTriangle, BookOpen, ExternalLink, LayoutGrid, List,
 } from "lucide-react";
+import { FileTypeIcon } from "@/components/files/file-type-icon";
 import {
   createLibraryFolder, renameLibraryFolder, deleteLibraryFolder,
   createLibraryDoc, deleteLibraryDoc, deleteLibraryFile,
@@ -101,44 +102,24 @@ function extractText(content: string): string {
   }
 }
 
-function FileTypeIcon({ mimeType, className }: { mimeType: string; className?: string }) {
-  const cls = cn("shrink-0", className);
-  if (mimeType.startsWith("image/")) return <FileImage className={cls} />;
-  if (mimeType.startsWith("video/")) return <FileVideo className={cls} />;
-  if (mimeType.startsWith("audio/")) return <FileAudio className={cls} />;
-  return <File className={cls} />;
-}
-
-function fileTypeStyle(mimeType: string): { bg: string; icon: string; ext: string } {
-  if (mimeType === "application/pdf")
-    return { bg: "#FEF2F2", icon: "#EF4444", ext: "PDF" };
-  if (mimeType.includes("word") || mimeType.includes("msword"))
-    return { bg: "#EFF6FF", icon: "#2563EB", ext: "DOCX" };
-  if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
-    return { bg: "#F0FDF4", icon: "#16A34A", ext: "XLSX" };
-  if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
-    return { bg: "#FFF7ED", icon: "#EA580C", ext: "PPTX" };
-  if (mimeType.includes("visio") || mimeType.includes("vsd"))
-    return { bg: "#EEF2FF", icon: "#4F46E5", ext: "VSD" };
-  if (mimeType.startsWith("audio/"))
-    return { bg: "#F5F3FF", icon: "#7C3AED", ext: "Audio" };
-  if (mimeType.startsWith("text/"))
-    return { bg: "#F8FAFC", icon: "#64748B", ext: "TXT" };
-  if (mimeType.includes("zip") || mimeType.includes("archive"))
-    return { bg: "#FEFCE8", icon: "#CA8A04", ext: "ZIP" };
-  return { bg: "#F8FAFC", icon: "#64748B", ext: "" };
+function getFileExt(mimeType: string, name: string): string {
+  if (mimeType === "application/pdf") return "PDF";
+  if (mimeType.includes("wordprocessingml") || mimeType === "application/msword") return "DOCX";
+  if (mimeType.includes("spreadsheetml") || mimeType === "application/vnd.ms-excel") return "XLSX";
+  if (mimeType.includes("presentationml") || mimeType === "application/vnd.ms-powerpoint") return "PPTX";
+  if (mimeType.includes("visio")) return "VSD";
+  if (mimeType.startsWith("audio/")) return "Audio";
+  if (mimeType.startsWith("video/")) return "Video";
+  if (mimeType.startsWith("text/")) return "TXT";
+  if (mimeType.includes("zip") || mimeType.includes("archive")) return "ZIP";
+  return name.split(".").pop()?.toUpperCase() ?? "";
 }
 
 function FileThumb({ file }: { file: LibraryFile }) {
   if (file.mimeType.startsWith("image/")) {
     return <img src={file.url} alt={file.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />;
   }
-  const { bg, icon } = fileTypeStyle(file.mimeType);
-  return (
-    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: bg }}>
-      <div style={{ color: icon }}><FileTypeIcon mimeType={file.mimeType} className="w-5 h-5" /></div>
-    </div>
-  );
+  return <FileTypeIcon mimeType={file.mimeType} filename={file.name} className="w-10 h-10 shrink-0" />;
 }
 
 // ─── Import / Revert dialog ───────────────────────────────────────────────────
@@ -372,9 +353,10 @@ export function LibraryView({
   const [importOpen, setImportOpen] = useState(false);
 
   // File upload
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCountRef = useRef(0);
+  const [draggingFiles, setDraggingFiles] = useState(false);
   const { startUpload, isUploading } = useUploadThing("libraryFileUploader", {
-    onClientUploadComplete: () => router.refresh(),
+    onClientUploadComplete: () => { setDraggingFiles(false); router.refresh(); },
   });
 
   // Bulk selection — no "select mode" toggle; checkboxes appear on hover per card
@@ -491,6 +473,30 @@ export function LibraryView({
     e.target.value = "";
   }
 
+  function handleUploadDragEnter(e: React.DragEvent) {
+    if (!isAdmin) return;
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragCountRef.current += 1;
+    if (dragCountRef.current === 1) setDraggingFiles(true);
+  }
+
+  function handleUploadDragLeave() {
+    if (!isAdmin) return;
+    dragCountRef.current -= 1;
+    if (dragCountRef.current === 0) setDraggingFiles(false);
+  }
+
+  function handleUploadDrop(e: React.DragEvent) {
+    if (!isAdmin) return;
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragCountRef.current = 0;
+    setDraggingFiles(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) startUpload(files, { folderId: currentFolderId ?? undefined });
+  }
+
   const [fileView, setFileView] = useState<"grid" | "list">("grid");
   const [confirmDelete, setConfirmDelete] = useState<{ type: "doc" | "file" | "folder"; id: string } | null>(null);
 
@@ -498,7 +504,21 @@ export function LibraryView({
   const cardGrid = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4";
 
   return (
-    <>
+    <div
+      className="relative"
+      onDragEnter={handleUploadDragEnter}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}
+      onDragLeave={handleUploadDragLeave}
+      onDrop={handleUploadDrop}
+    >
+      {/* File drag-drop upload overlay */}
+      {draggingFiles && (
+        <div className="absolute inset-0 z-50 rounded-xl bg-primary/5 border-2 border-dashed border-primary/40 flex flex-col items-center justify-center gap-3 pointer-events-none">
+          <CloudUpload className="w-10 h-10 text-primary/70" />
+          <p className="text-sm font-medium text-primary">Drop files to upload</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
@@ -532,14 +552,17 @@ export function LibraryView({
               <FolderPlus className="w-3.5 h-3.5" />
               New Folder
             </Button>
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-            <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+            <label className={cn(
+              "flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors",
+              isUploading && "opacity-50 pointer-events-none"
+            )}>
+              <input type="file" multiple className="hidden" onChange={handleFileSelect} disabled={isUploading} />
               {isUploading
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
               }
               Upload
-            </Button>
+            </label>
             <Button size="sm" className="gap-1.5 h-8" onClick={handleCreateDoc} disabled={pending}>
               <Plus className="w-3.5 h-3.5" />
               New Doc
@@ -868,22 +891,22 @@ export function LibraryView({
             <div className={cardGrid}>
               {files.map((file) => {
                 const isSelected = selectedFiles.has(file.id);
-                const { bg, icon, ext } = fileTypeStyle(file.mimeType);
+                const ext = getFileExt(file.mimeType, file.name);
                 return (
                   <div key={file.id} className="group relative" draggable={isAdmin} onDragStart={isAdmin ? (e) => handleDragStart(e, "file", file.id) : undefined}>
                     <a href={file.url} target="_blank" rel="noopener noreferrer">
                       <div className={cn("rounded-xl overflow-hidden border bg-card transition-all duration-200", isSelected ? "border-primary ring-2 ring-primary/20" : "border-border/60 hover:border-border hover:shadow-md hover:-translate-y-0.5")}>
-                        <div className="h-32 flex items-center justify-center overflow-hidden" style={{ backgroundColor: file.mimeType.startsWith("image/") ? undefined : bg }}>
+                        <div className="h-32 flex items-center justify-center overflow-hidden bg-gray-50">
                           {file.mimeType.startsWith("image/") ? (
                             <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
                           ) : (
-                            <div style={{ color: icon }}><FileTypeIcon mimeType={file.mimeType} className="w-12 h-12" /></div>
+                            <FileTypeIcon mimeType={file.mimeType} filename={file.name} className="w-14 h-14" />
                           )}
                         </div>
                         <div className="px-3 pt-2 pb-2.5">
                           <p className="text-sm font-medium text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors">{file.name}</p>
                           <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate">
-                            {ext && <span className="font-semibold" style={{ color: icon }}>{ext} · </span>}
+                            {getFileExt(file.mimeType, file.name) && <span className="font-semibold">{getFileExt(file.mimeType, file.name)} · </span>}
                             {formatBytes(file.size)}
                           </p>
                         </div>
@@ -915,7 +938,7 @@ export function LibraryView({
             <div className="rounded-xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
               {files.map((file) => {
                 const isSelected = selectedFiles.has(file.id);
-                const { icon, ext } = fileTypeStyle(file.mimeType);
+                const ext = getFileExt(file.mimeType, file.name);
                 return (
                   <div key={file.id} className={cn("group flex items-center gap-3 px-4 py-2.5 transition-colors", isSelected ? "bg-primary/5" : "hover:bg-muted/40")} draggable={isAdmin} onDragStart={isAdmin ? (e) => handleDragStart(e, "file", file.id) : undefined}>
                     {isAdmin && (
@@ -928,7 +951,7 @@ export function LibraryView({
                       <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
                       <p className="text-xs text-muted-foreground/60 mt-0.5">{formatBytes(file.size)} · {formatDistanceToNow(new Date(file.createdAt), { addSuffix: true })}</p>
                     </div>
-                    {ext && <span className="text-[10px] font-semibold px-2 py-0.5 rounded shrink-0" style={{ backgroundColor: icon + "15", color: icon }}>{ext}</span>}
+                    {getFileExt(file.mimeType, file.name) && <span className="text-[10px] font-semibold px-2 py-0.5 rounded shrink-0 bg-muted text-muted-foreground">{getFileExt(file.mimeType, file.name)}</span>}
                     <a href={file.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0 opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
@@ -985,6 +1008,6 @@ export function LibraryView({
           targetFolderName={breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1]!.name : "Library"}
         />
       )}
-    </>
+    </div>
   );
 }
