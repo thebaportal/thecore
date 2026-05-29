@@ -422,7 +422,7 @@ export default async function DashboardPage() {
       accent: overdueTaskCount > 0 ? "#dc2626" : "#9ca3af",
     },
     {
-      label: "Unread Messages",
+      label: unreadPingCount === 1 ? "Unread Message" : "Unread Messages",
       value: unreadPingCount,
       href:  "/inbox",
       Icon:  MessageSquare,

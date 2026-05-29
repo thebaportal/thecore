@@ -45,6 +45,7 @@ export async function getDashboardData() {
     focusTasks,
     projects,
     recentPings,
+    inboxParticipants,
     stats,
     unlockedPhases,
     revisionDeliverables,
@@ -98,6 +99,29 @@ export async function getDashboardData() {
           orderBy: { createdAt: "desc" },
           take: 1,
           select: { body: true, createdAt: true, author: { select: { name: true } } },
+        },
+      },
+    }),
+
+    // Inbox-only unread count (DIRECT + non-project GROUP) — matches what the inbox page shows
+    db.pingParticipant.findMany({
+      where: {
+        userId: user.id,
+        ping: {
+          organizationId: org.id,
+          OR: [{ type: "DIRECT" }, { type: "GROUP", projectId: null }],
+        },
+      },
+      include: {
+        ping: {
+          include: {
+            messages: {
+              where: { deletedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { createdAt: true },
+            },
+          },
         },
       },
     }),
@@ -181,10 +205,11 @@ export async function getDashboardData() {
     };
   });
 
-  const unreadPingCount = recentPings.filter((ping) => {
-    const lastMsg = ping.messages[0];
-    const me = ping.participants.find((p) => p.user.id === user.id) as { lastReadAt: Date | null } | undefined;
-    return lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
+  const unreadPingCount = inboxParticipants.filter((p) => {
+    const lastMsg = p.ping.messages[0];
+    if (!lastMsg) return false;
+    if (!p.lastReadAt) return true;
+    return lastMsg.createdAt > p.lastReadAt;
   }).length;
 
   const sorted = [...focusTasks].sort((a, b) => {
