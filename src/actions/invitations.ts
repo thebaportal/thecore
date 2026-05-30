@@ -83,7 +83,7 @@ async function assertInstructorOnProject(projectId: string) {
 export type ProjectInviteeInput = { firstName: string; lastName: string; email: string };
 export type ProjectInviteResult = {
   email: string;
-  status: "invited" | "added" | "added_multi_project" | "already_member" | "error";
+  status: "invited" | "added" | "already_member" | "already_in_project" | "error";
   error?: string;
 };
 
@@ -118,20 +118,24 @@ export async function inviteToProject(
       }
 
       if (existingUser?.memberships.length) {
-        const existingProject = await db.projectMember.findFirst({
-          where: { userId: existingUser.id, project: { organizationId: org.id }, NOT: { projectId } },
-          select: { project: { select: { name: true } } },
-        });
+        const orgRole = existingUser.memberships[0]?.role;
+        // Members are limited to one project — block the add if they're already in one
+        if (orgRole === "MEMBER") {
+          const existingProject = await db.projectMember.findFirst({
+            where: { userId: existingUser.id, project: { organizationId: org.id }, NOT: { projectId } },
+            select: { project: { select: { name: true } } },
+          });
+          if (existingProject) {
+            results.push({ email, status: "already_in_project", error: existingProject.project.name });
+            continue;
+          }
+        }
         await db.projectMember.upsert({
           where: { projectId_userId: { projectId, userId: existingUser.id } },
           create: { projectId, userId: existingUser.id },
           update: {},
         });
-        if (existingProject) {
-          results.push({ email, status: "added_multi_project", error: existingProject.project.name });
-        } else {
-          results.push({ email, status: "added" });
-        }
+        results.push({ email, status: "added" });
         continue;
       }
 

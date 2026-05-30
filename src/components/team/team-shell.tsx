@@ -151,15 +151,34 @@ function ProjectCard({
 
 // ── Person card ───────────────────────────────────────────────────────────────
 
-function PersonCard({ person, currentDbUserId }: { person: Member; currentDbUserId: string | null }) {
+function PersonCard({
+  person,
+  project,
+  currentDbUserId,
+}: {
+  person: Member;
+  project: { id: string; name: string; color: string | null } | null;
+  currentDbUserId: string | null;
+}) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-4 flex items-center gap-3 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3.5 flex items-center gap-3 hover:shadow-md transition-shadow">
       <UserAvatar userId={person.userId} name={person.name} avatarUrl={person.avatarUrl} size="md" side="right" align="start" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{person.name}</p>
-        <p className="text-xs text-slate-400 truncate mt-0.5">
-          {person.jobTitle ?? person.email}
-        </p>
+        {person.jobTitle && (
+          <p className="text-xs text-slate-400 truncate mt-0.5">{person.jobTitle}</p>
+        )}
+        {project ? (
+          <div className="flex items-center gap-1 mt-1">
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: project.color ?? "#6366f1" }}
+            />
+            <span className="text-xs text-slate-500 truncate">{project.name}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-300 mt-1 italic">No project</p>
+        )}
       </div>
       {currentDbUserId && person.userId !== currentDbUserId && (
         <MessageButton targetUserId={person.userId} targetName={person.name} />
@@ -187,6 +206,16 @@ export function TeamShell({
   const q = search.toLowerCase().trim();
 
   const activeCount = projects.filter((p) => p.status === "ACTIVE").length;
+
+  // Map each user to their first project (members should only be in one)
+  const projectByUser = new Map<string, { id: string; name: string; color: string | null }>();
+  for (const project of projects) {
+    for (const member of project.members) {
+      if (!projectByUser.has(member.userId)) {
+        projectByUser.set(member.userId, { id: project.id, name: project.name, color: project.color });
+      }
+    }
+  }
 
   // Filter people
   const filteredPeople = q
@@ -260,7 +289,12 @@ export function TeamShell({
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filteredPeople.map((person) => (
-              <PersonCard key={person.id} person={person} currentDbUserId={currentDbUserId} />
+              <PersonCard
+                key={person.id}
+                person={person}
+                project={projectByUser.get(person.userId) ?? null}
+                currentDbUserId={currentDbUserId}
+              />
             ))}
           </div>
         </section>
