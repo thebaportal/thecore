@@ -69,8 +69,12 @@ export async function syncCurrentIdentity() {
       select: { id: true, projectId: true },
     });
     if (pendingInvitations.length > 0) {
+      // Members should only be in one project — honour the first invitation only.
+      // Admins and owners can be in all projects.
+      const isMember = clerkRole === "org:member";
+      const toFulfil = isMember ? pendingInvitations.slice(0, 1) : pendingInvitations;
       await Promise.all(
-        pendingInvitations.map((inv) =>
+        toFulfil.map((inv) =>
           db.projectMember.upsert({
             where: { projectId_userId: { projectId: inv.projectId, userId: user.id } },
             create: { projectId: inv.projectId, userId: user.id },

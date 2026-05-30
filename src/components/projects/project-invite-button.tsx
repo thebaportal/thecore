@@ -32,10 +32,11 @@ function newRow(): Row {
 type Step = "role" | "details" | "done";
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
-  invited:        { label: "Invited",          icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />, cls: "text-emerald-600" },
-  added:          { label: "Added",            icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />, cls: "text-emerald-600" },
-  already_member: { label: "Already enrolled", icon: <CheckCircle2 className="w-4 h-4 text-muted-foreground shrink-0" />, cls: "text-muted-foreground" },
-  error:          { label: "Failed",           icon: <AlertCircle className="w-4 h-4 text-destructive shrink-0" />, cls: "text-destructive" },
+  invited:            { label: "Invited",          icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />, cls: "text-emerald-600" },
+  added:              { label: "Added",            icon: <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />, cls: "text-emerald-600" },
+  added_multi_project:{ label: "Added (already in another project)", icon: <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />, cls: "text-amber-600" },
+  already_member:     { label: "Already enrolled", icon: <CheckCircle2 className="w-4 h-4 text-muted-foreground shrink-0" />, cls: "text-muted-foreground" },
+  error:              { label: "Failed",           icon: <AlertCircle className="w-4 h-4 text-destructive shrink-0" />, cls: "text-destructive" },
 };
 
 export function ProjectInviteButton({ projectId }: { projectId: string }) {
@@ -260,6 +261,9 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
                         <p className="text-sm text-foreground truncate">{r.email}</p>
                         {r.status === "error" && r.error && (
                           <p className="text-xs text-destructive mt-0.5">{r.error}</p>
+                        )}
+                        {r.status === "added_multi_project" && r.error && (
+                          <p className="text-xs text-amber-600 mt-0.5">Also in: {r.error}</p>
                         )}
                       </div>
                       <span className={cn("text-xs font-medium shrink-0", cfg.cls)}>
