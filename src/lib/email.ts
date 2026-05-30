@@ -25,6 +25,7 @@ const KIND_SUBJECT_PREFIX: Record<NotificationKind, string> = {
   CHAT_MENTION:           "You were mentioned",
   LIBRARY_UPLOAD:         "New library resource",
   MANDATE_UPDATED:        "Project mandate updated",
+  ANNOUNCEMENT:           "Announcement",
 };
 
 function buildHtml({

@@ -35,6 +35,7 @@ model Organization {
   projects             Project[]
   files                ProjectFile[]
   teams                Team[]
+  announcements        Announcement[]
 
   @@index([clerkOrgId])
 }
@@ -63,6 +64,7 @@ model User {
   messages              Message[]
   notifications         Notification[]
   memberships           OrgMembership[]
+  announcements         Announcement[]
   reviewedDeliverables   PhaseDeliverable[]   @relation("DeliverableReviewer")
   submittedDeliverables  PhaseDeliverable[]   @relation("DeliverableSubmitter")
   assignedDeliverables   PhaseDeliverable[]   @relation("DeliverableAssignedReviewer")
@@ -738,4 +740,19 @@ enum NotificationKind {
   CHAT_MENTION
   LIBRARY_UPLOAD
   MANDATE_UPDATED
+  ANNOUNCEMENT
+}
+
+model Announcement {
+  id             String       @id @default(cuid())
+  organizationId String
+  authorId       String
+  title          String
+  body           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author         User         @relation(fields: [authorId], references: [id])
+
+  @@index([organizationId])
 }

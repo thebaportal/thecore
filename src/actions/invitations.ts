@@ -107,7 +107,7 @@ export async function inviteToProject(
         where: { email },
         select: {
           id: true,
-          memberships: { where: { organizationId: org.id }, select: { id: true } },
+          memberships: { where: { organizationId: org.id }, select: { id: true, role: true } },
           projectMembers: { where: { projectId }, select: { id: true } },
         },
       });

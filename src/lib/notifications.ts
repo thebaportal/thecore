@@ -13,6 +13,7 @@ const KIND_TO_PREF: Record<NotificationKind, keyof EmailPrefs> = {
   CHAT_MENTION:          "emailNotifMentions",
   LIBRARY_UPLOAD:        "emailNotifLibrary",
   MANDATE_UPDATED:       "emailNotifDeliverables",
+  ANNOUNCEMENT:          "emailNotifEnabled",
 };
 
 type EmailPrefs = {

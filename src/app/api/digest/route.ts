@@ -13,6 +13,7 @@ const SECTION_LABELS: Record<NotificationKind, string> = {
   CHAT_MENTION:           "Messages",
   LIBRARY_UPLOAD:         "Library",
   MANDATE_UPDATED:        "Project mandates",
+  ANNOUNCEMENT:           "Announcements",
 };
 
 function formatSinceLabel(since: Date): string {
