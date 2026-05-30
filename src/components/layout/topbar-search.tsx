@@ -8,7 +8,7 @@ type Result = {
   projects: { id: string; name: string; color: string | null; iconEmoji: string | null }[];
   tasks:    { id: string; title: string; projectId: string; project: { name: string } }[];
   docs:     { id: string; title: string; emoji: string | null; projectId: string | null; project: { name: string } | null }[];
-  files:    { id: string; name: string; mimeType: string | null; projectId: string; project: { name: string } }[];
+  files:    { id: string; name: string; mimeType: string | null; projectId: string | null; project: { name: string } | null }[];
   pings:    { id: string; title: string | null }[];
 };
 
@@ -130,7 +130,7 @@ export function TopbarSearch() {
                   key={t.id}
                   icon={<CheckSquare className="w-3.5 h-3.5 text-muted-foreground" />}
                   label={t.title}
-                  sub={t.project.name}
+                  sub={t.project?.name}
                   onClick={() => go(`/projects/${t.projectId}/tasks`)}
                 />
               ))}
@@ -158,7 +158,7 @@ export function TopbarSearch() {
                   key={f.id}
                   icon={<File className="w-3.5 h-3.5 text-muted-foreground" />}
                   label={f.name}
-                  sub={f.project.name}
+                  sub={f.project?.name}
                   onClick={() => go(`/projects/${f.projectId}/files`)}
                 />
               ))}
