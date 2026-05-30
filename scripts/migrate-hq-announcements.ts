@@ -1,9 +1,15 @@
-import { PrismaClient } from "../src/generated/prisma";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import * as dotenv from "dotenv";
 
-const db = new PrismaClient();
+dotenv.config({ path: "../.env" });
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const db = new PrismaClient({ adapter });
 
 async function main() {
-  // Find the HQ project
   const hqProject = await db.project.findFirst({
     where: { name: { contains: "Globalstride", mode: "insensitive" } },
     select: { id: true, name: true, organizationId: true },
@@ -13,32 +19,21 @@ async function main() {
     console.log("❌ Could not find Globalstride HQ project.");
     return;
   }
-
-  console.log(`✅ Found project: "${hqProject.name}" (${hqProject.id})`);
+  console.log(`✅ Found: "${hqProject.name}"`);
 
   const posts = await db.projectPost.findMany({
     where: { projectId: hqProject.id },
     orderBy: { createdAt: "asc" },
     include: { author: { select: { id: true, name: true } } },
   });
+  console.log(`📋 ${posts.length} posts to migrate`);
 
-  console.log(`📋 Found ${posts.length} posts to migrate`);
-
-  if (posts.length === 0) {
-    console.log("Nothing to migrate.");
-    return;
-  }
-
-  let migrated = 0;
-  let skipped  = 0;
-
+  let migrated = 0, skipped = 0;
   for (const post of posts) {
-    // Skip if already migrated (same title + org)
-    const existing = await db.announcement.findFirst({
+    const exists = await db.announcement.findFirst({
       where: { organizationId: hqProject.organizationId, title: post.title },
     });
-    if (existing) { skipped++; continue; }
-
+    if (exists) { skipped++; continue; }
     await db.announcement.create({
       data: {
         organizationId: hqProject.organizationId,
@@ -49,15 +44,12 @@ async function main() {
         updatedAt:      post.updatedAt,
       },
     });
-
     migrated++;
-    console.log(`  ✓ "${post.title}" by ${post.author.name}`);
+    console.log(`  ✓ "${post.title}" — ${post.author.name}`);
   }
 
-  console.log(`\n✅ Done. Migrated: ${migrated}, Skipped (already exist): ${skipped}`);
-  console.log(`\nYou can now delete the "${hqProject.name}" project from the UI.`);
+  console.log(`\n✅ Migrated: ${migrated}  Skipped: ${skipped}`);
+  console.log(`\nNow delete "${hqProject.name}" from the Projects UI.`);
 }
 
-main()
-  .catch(console.error)
-  .finally(() => db.$disconnect());
+main().catch(console.error).finally(() => db.$disconnect());

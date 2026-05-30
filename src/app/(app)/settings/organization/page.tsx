@@ -26,6 +26,8 @@ export default async function OrganizationSettingsPage() {
           elements: {
             rootBox: "w-full",
             card: "border border-border rounded-xl shadow-none",
+            // Hide "Leave organization" and "Delete organization" — too dangerous to show
+            organizationProfilePage__danger: "hidden",
           },
         }}
       />
