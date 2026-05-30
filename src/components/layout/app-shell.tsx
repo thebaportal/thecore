@@ -130,6 +130,14 @@ async function getOverdueTaskCount(clerkUserId: string, clerkOrgId: string) {
 }
 
 
+async function getOrgBranding(clerkOrgId: string) {
+  const org = await db.organization.findUnique({
+    where: { clerkOrgId },
+    select: { name: true, logoUrl: true },
+  });
+  return { orgName: org?.name ?? "", orgLogoUrl: org?.logoUrl ?? null };
+}
+
 export async function AppShell({
   children,
   role = "ADMIN",
@@ -141,11 +149,12 @@ export async function AppShell({
 }) {
   const { userId, orgId } = await auth();
 
-  const [cmdData, unreadCount, notifications, overdueCount] = await Promise.all([
+  const [cmdData, unreadCount, notifications, overdueCount, branding] = await Promise.all([
     userId && orgId ? getCommandBarData(userId, orgId) : Promise.resolve({ projects: [], tasks: [], docs: [], currentDbUserId: "" }),
     userId && orgId ? getUnreadPingCount(userId, orgId) : Promise.resolve(0),
     getUserNotifications(),
     userId && orgId ? getOverdueTaskCount(userId, orgId) : Promise.resolve(0),
+    orgId ? getOrgBranding(orgId) : Promise.resolve({ orgName: "", orgLogoUrl: null }),
   ]);
 
   return (
@@ -156,6 +165,8 @@ export async function AppShell({
         notifications={notifications}
         role={role}
         studentProjectId={studentProjectId}
+        orgLogoUrl={branding.orgLogoUrl}
+        orgName={branding.orgName}
       >
         {children}
       </ShellLayout>

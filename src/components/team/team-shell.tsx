@@ -172,11 +172,13 @@ function PersonCard({ person, currentDbUserId }: { person: Member; currentDbUser
 
 export function TeamShell({
   orgName,
+  orgLogoUrl,
   people,
   projects,
   currentDbUserId,
 }: {
   orgName: string;
+  orgLogoUrl?: string | null;
   people: Member[];
   projects: Project[];
   currentDbUserId: string | null;
@@ -222,11 +224,20 @@ export function TeamShell({
     <div className="-mt-6 sm:-mt-8 -mx-4 sm:-mx-6 min-h-screen bg-slate-100 px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
 
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Team Workspace</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          {orgName} · {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
-        </p>
+      <div className="mb-6 flex items-center gap-4">
+        {orgLogoUrl && (
+          <img
+            src={orgLogoUrl}
+            alt={orgName}
+            className="h-10 w-auto object-contain"
+          />
+        )}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Team Workspace</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {orgName} · {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
+          </p>
+        </div>
       </div>
 
       {/* Search */}

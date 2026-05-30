@@ -12,6 +12,8 @@ export function ShellLayout({
   notifications,
   role = "ADMIN",
   studentProjectId = null,
+  orgLogoUrl = null,
+  orgName = "",
 }: {
   children: React.ReactNode;
   unreadPings: number;
@@ -19,6 +21,8 @@ export function ShellLayout({
   notifications: Notification[];
   role?: "MEMBER" | "ADMIN";
   studentProjectId?: string | null;
+  orgLogoUrl?: string | null;
+  orgName?: string;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -43,6 +47,8 @@ export function ShellLayout({
           unreadPings={unreadPings}
           role={role}
           studentProjectId={studentProjectId}
+          orgLogoUrl={orgLogoUrl}
+          orgName={orgName}
           onClose={() => setMobileOpen(false)}
         />
       </div>

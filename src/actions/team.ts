@@ -34,7 +34,7 @@ export async function getTeamByProject() {
     },
   });
 
-  if (!org) return { orgName: "", people: [], projects: [], currentDbUserId: null };
+  if (!org) return { orgName: "", orgLogoUrl: null, people: [], projects: [], currentDbUserId: null };
 
   const dbUser = userId
     ? await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } })
@@ -44,6 +44,7 @@ export async function getTeamByProject() {
 
   return {
     orgName: org.name,
+    orgLogoUrl: org.logoUrl,
     currentDbUserId: dbUser?.id ?? null,
     people: org.memberships.map((m) => ({
       id: m.id,

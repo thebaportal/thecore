@@ -71,16 +71,24 @@ export function Sidebar({
   unreadPings = 0,
   role = "ADMIN",
   studentProjectId = null,
+  orgLogoUrl = null,
+  orgName = "",
   onClose,
 }: {
   overdueTasks?: number;
   unreadPings?: number;
   role?: "MEMBER" | "ADMIN";
   studentProjectId?: string | null;
+  orgLogoUrl?: string | null;
+  orgName?: string;
   onClose?: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const isStudent = role === "MEMBER";
+
+  const initials = orgName
+    ? orgName.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
+    : "TC";
 
   const Logo = (
     <div className={cn(
@@ -89,8 +97,14 @@ export function Sidebar({
     )}>
       {collapsed ? (
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground text-xs font-bold">TC</span>
+          <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
+      ) : orgLogoUrl ? (
+        <img
+          src={orgLogoUrl}
+          alt={orgName}
+          className="h-7 w-auto max-w-[140px] object-contain"
+        />
       ) : (
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
