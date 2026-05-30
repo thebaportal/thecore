@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Plus, Search, Menu, Mail } from "lucide-react";
+import { Plus, Menu, Mail } from "lucide-react";
 import { UserMenu } from "@/components/layout/user-menu";
+import { TopbarSearch } from "@/components/layout/topbar-search";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,11 +42,6 @@ export function Topbar({
     pathname.startsWith("/tasks")
   );
 
-  function openCommandBar() {
-    const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
-    document.dispatchEvent(e);
-  }
-
   return (
     <>
       <header className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 bg-card border-b border-border">
@@ -61,13 +57,7 @@ export function Topbar({
             </button>
           )}
           {/* Search */}
-          <button
-            onClick={openCommandBar}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground text-sm hover:bg-muted transition-colors w-44 sm:w-64"
-          >
-            <Search className="w-3.5 h-3.5 shrink-0" />
-            <span className="flex-1 text-left">Search...</span>
-          </button>
+          <TopbarSearch />
         </div>
 
         {/* Right */}
