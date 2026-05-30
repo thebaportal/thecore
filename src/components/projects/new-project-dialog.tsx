@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, Check, Layers, Loader2 } from "lucide-react";
-import { createProject } from "@/actions/projects";
+import { createProject, getPhaseTemplates } from "@/actions/projects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,11 +52,19 @@ interface NewProjectDialogProps {
   templates?: PhaseTemplate[];
 }
 
-export function NewProjectDialog({ open, onOpenChange, templates = [] }: NewProjectDialogProps) {
+export function NewProjectDialog({ open, onOpenChange, templates: templatesProp = [] }: NewProjectDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<PhaseTemplate[]>(templatesProp);
+
+  // Fetch templates when dialog opens so every caller gets them
+  useEffect(() => {
+    if (open && templates.length === 0) {
+      getPhaseTemplates().then((t) => setTemplates(t as PhaseTemplate[]));
+    }
+  }, [open]);
   const [selectedColor, setSelectedColor] = useState(PROJECT_COLORS[0]!.value);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
 
