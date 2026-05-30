@@ -131,3 +131,16 @@
     @apply font-sans;
   }
 }
+
+/* Hide Clerk's Leave/Delete org danger section — not relevant for org owners */
+.cl-profileSection__danger,
+.cl-organizationProfilePage__danger,
+[data-localization-key="organizationProfile.profilePage.dangerSection.leaveOrganization.title"],
+[data-localization-key="organizationProfile.profilePage.dangerSection.deleteOrganization.title"] {
+  display: none !important;
+}
+/* Hide the entire row containing leave/delete by targeting their parent sections */
+.cl-profileSectionTitle__danger,
+.cl-profileSectionContent__danger {
+  display: none !important;
+}
