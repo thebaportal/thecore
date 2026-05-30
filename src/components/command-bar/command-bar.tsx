@@ -146,32 +146,13 @@ export function CommandBar({ projects, tasks, docs = [], role = "ADMIN", current
                   {hasQuery && !searching ? `No results for "${query}"` : null}
                 </Command.Empty>
 
-                {/* Students: show a hint when no query instead of preloaded data */}
-                {!hasQuery && !isAdmin && (
+                {/* Empty state — just prompt to type */}
+                {!hasQuery && (
                   <div className="py-10 flex flex-col items-center gap-1.5 text-center px-4">
-                    <p className="text-sm text-muted-foreground">Search your project</p>
-                    <p className="text-xs text-muted-foreground/60">Tasks, docs, files, chat messages…</p>
+                    <Search className="w-6 h-6 text-muted-foreground/30 mb-1" />
+                    <p className="text-sm text-muted-foreground">Type to search</p>
+                    <p className="text-xs text-muted-foreground/50">Projects, tasks, docs, files, messages…</p>
                   </div>
-                )}
-
-                {/* Quick Actions — shown when no query, admin only */}
-                {!hasQuery && isAdmin && (
-                  <Command.Group heading="Quick Actions" className={GROUP_HEADING}>
-                    <CmdItem icon={<Plus className="w-3.5 h-3.5 text-blue-600" />}   label="New Project" onSelect={onNewProject} setOpen={setOpen} />
-                    <CmdItem icon={<Plus className="w-3.5 h-3.5 text-amber-600" />}  label="New Task"    onSelect={onNewTask}    setOpen={setOpen} />
-                    <CmdItem icon={<Plus className="w-3.5 h-3.5 text-violet-600" />} label="New Message" onSelect={onNewPing} setOpen={setOpen} />
-                  </Command.Group>
-                )}
-
-                {/* Navigation — shown when no query, admin only */}
-                {!hasQuery && isAdmin && (
-                  <Command.Group heading="Navigate" className={GROUP_HEADING}>
-                    <CmdItem icon={<Home className="w-3.5 h-3.5" />}          label="Dashboard" onSelect={() => go("/dashboard")} setOpen={setOpen} />
-                    <CmdItem icon={<FolderKanban className="w-3.5 h-3.5" />}  label="Projects"  onSelect={() => go("/projects")} setOpen={setOpen} />
-                    <CmdItem icon={<CheckSquare className="w-3.5 h-3.5" />}   label="My Tasks"  onSelect={() => go("/tasks")}     setOpen={setOpen} />
-                    <CmdItem icon={<MessageCircle className="w-3.5 h-3.5" />} label="Inbox"     onSelect={() => go("/inbox")}     setOpen={setOpen} />
-                    <CmdItem icon={<Activity className="w-3.5 h-3.5" />}      label="Activity"  onSelect={() => go("/activity")}  setOpen={setOpen} />
-                  </Command.Group>
                 )}
 
                 {/* Projects — only shown when typing */}
