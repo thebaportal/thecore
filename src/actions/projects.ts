@@ -3,7 +3,10 @@
 import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { UTApi } from "uploadthing/server";
 import { createProjectSchema, updateProjectSchema, type CreateProjectInput, type UpdateProjectInput } from "@/lib/validations/project";
+
+const utapi = new UTApi();
 
 // Syncs the current Clerk user + org into our DB on first use.
 // Replaces webhook dependency during development.
@@ -254,7 +257,31 @@ export async function deleteProject(id: string) {
   const { org } = await syncCurrentIdentity();
   if (!org) throw new Error("No active organization");
 
-  await db.project.delete({ where: { id, organizationId: org.id } });
+  const project = await db.project.findUnique({
+    where: { id, organizationId: org.id },
+    select: { id: true },
+  });
+  if (!project) throw new Error("Project not found");
+
+  // Collect UploadThing keys before deletion so we can clean up storage
+  const files = await db.projectFile.findMany({
+    where: { projectId: id },
+    select: { utKey: true },
+  });
+  const utKeys = files.map((f) => f.utKey).filter((k): k is string => !!k);
+
+  // Pings linked to a project have no cascade — delete them explicitly
+  // (cascades to PingParticipant, Message, Reaction, Attachment via their own cascades)
+  await db.ping.deleteMany({ where: { projectId: id } });
+
+  // Delete project — cascades to members, phases, deliverables, tasks, files, docs, posts
+  await db.project.delete({ where: { id } });
+
+  // Clean up uploaded files from storage after DB records are gone
+  if (utKeys.length > 0) {
+    await utapi.deleteFiles(utKeys);
+  }
+
   revalidatePath("/projects");
 }
 
