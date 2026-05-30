@@ -235,7 +235,7 @@ export function TeamShell({
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Team Workspace</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {orgName} · {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
+            {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
           </p>
         </div>
       </div>
