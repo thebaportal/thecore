@@ -30,7 +30,7 @@ export async function getUserCard(userId: string) {
   const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
   if (!org) return null;
 
-  const [user, approvedCount, projectCount] = await Promise.all([
+  const [user, approvedCount, projects] = await Promise.all([
     db.user.findUnique({
       where: { id: userId },
       select: {
@@ -52,16 +52,20 @@ export async function getUserCard(userId: string) {
         phase: { project: { organizationId: org.id } },
       },
     }),
-    db.projectMember.count({
-      where: {
-        userId,
-        project: { organizationId: org.id },
-      },
+    db.projectMember.findMany({
+      where: { userId, project: { organizationId: org.id } },
+      select: { project: { select: { id: true, name: true, color: true } } },
+      orderBy: { joinedAt: "asc" },
     }),
   ]);
 
   if (!user) return null;
-  return { ...user, approvedCount, projectCount, orgName: org.name };
+  return {
+    ...user,
+    approvedCount,
+    projects: projects.map((m) => m.project),
+    orgName: org.name,
+  };
 }
 
 export async function leaveOrganization() {

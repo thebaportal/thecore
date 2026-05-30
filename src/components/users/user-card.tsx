@@ -89,14 +89,27 @@ export function UserCard({
               )}
             </div>
 
-            {/* Stats */}
-            {user.projectCount > 0 && (
-              <div className="flex justify-center py-3 border-b border-border/60 mx-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground tabular-nums">{user.projectCount}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                    {user.projectCount === 1 ? "Project" : "Projects"}
-                  </p>
+            {/* Projects */}
+            {user.projects.length > 0 && (
+              <div className="px-4 py-3 border-b border-border/60 text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                  {user.projects.length === 1 ? "Project" : "Projects"}
+                </p>
+                <div className="flex flex-col gap-1">
+                  {user.projects.slice(0, 4).map((p) => (
+                    <div key={p.id} className="flex items-center gap-1.5">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: p.color ?? "#6366f1" }}
+                      />
+                      <span className="text-xs text-foreground truncate">{p.name}</span>
+                    </div>
+                  ))}
+                  {user.projects.length > 4 && (
+                    <p className="text-xs text-muted-foreground pl-3.5">
+                      +{user.projects.length - 4} more
+                    </p>
+                  )}
                 </div>
               </div>
             )}
