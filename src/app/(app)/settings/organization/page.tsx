@@ -21,6 +21,7 @@ export default async function OrganizationSettingsPage() {
       </div>
 
       <OrganizationProfile
+        routing="hash"
         appearance={{
           elements: {
             rootBox: "w-full",
