@@ -16,6 +16,7 @@ import { getActivityFeed, type ActivityItem } from "@/actions/activity";
 import { ProjectCard } from "@/components/projects/project-card";
 import { AIBriefingCard } from "@/components/dashboard/ai-briefing-card";
 import { Greeting } from "@/components/dashboard/greeting";
+import { DashboardDate } from "@/components/dashboard/dashboard-date";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -437,7 +438,7 @@ export default async function DashboardPage() {
       {/* ── Greeting ── */}
       <div>
         <p className="text-xs text-muted-foreground">
-          {format(now, "EEEE, MMMM d")} · {data.orgName}
+          <DashboardDate orgName={data.orgName} />
         </p>
         <h1 className="text-lg font-semibold text-foreground mt-0.5">
           <Greeting name={user.name} />
