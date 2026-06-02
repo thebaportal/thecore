@@ -22,7 +22,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider publishableKey="pk_live_Y2xlcmsub250aGVjb3JlLmNvbSQ">
       <html lang="en" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
         <body className="min-h-full">
           <TooltipProvider delay={300}>{children}</TooltipProvider>
