@@ -9,11 +9,17 @@ const isPublicRoute = createRouteMatcher([
   "/api/digest",           // Cron job — protected by CRON_SECRET header
 ]);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+export default clerkMiddleware(
+  async (auth, request) => {
+    if (!isPublicRoute(request)) {
+      await auth.protect();
+    }
+  },
+  {
+    publishableKey: "pk_live_Y2xlcmsub250aGVjb3JlLmNvbSQ",
+    secretKey: process.env.CLERK_SECRET_KEY,
   }
-});
+);
 
 export const config = {
   matcher: [
