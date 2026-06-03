@@ -93,6 +93,12 @@ export function htmlToMarkdown(html: string): string {
   // Strip remaining tags
   md = md.replace(/<[^>]+>/g, "");
 
+  // Collapse sequences of single-character lines — Basecamp sometimes wraps each
+  // character in its own <div>, producing "y\ne\ns" instead of "yes".
+  // Only fires when every line in the run is exactly 1 char, so normal multi-line
+  // messages (paragraphs, lists) are never affected.
+  md = md.replace(/(^.$\n)+^.$/mg, (match) => match.replace(/\n/g, ""));
+
   md = decodeEntities(md);
   md = md.replace(/\n{3,}/g, "\n\n").trim();
 
