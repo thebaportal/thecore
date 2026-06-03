@@ -99,6 +99,11 @@ export function htmlToMarkdown(html: string): string {
   // messages (paragraphs, lists) are never affected.
   md = md.replace(/(^.$\n)+^.$/mg, (match) => match.replace(/\n/g, ""));
 
+  // Collapse single \n between non-newline chars to a space — handles word splits
+  // like "Hello every\none" (from <div>Hello every</div><div>one</div>).
+  // Double \n paragraph breaks are NOT touched (both chars fail the look-around).
+  md = md.replace(/(?<=[^\n])\n(?=[^\n])/g, " ");
+
   md = decodeEntities(md);
   md = md.replace(/\n{3,}/g, "\n\n").trim();
 

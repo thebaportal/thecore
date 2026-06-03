@@ -10,15 +10,14 @@ export async function GET() {
     "<div>y</div><div>e</div><div>s</div>",
     "<div>Hello every</div><div>one</div>",
     "<div>Hi team,</div><div>please join</div>",
+    "<div>Hi all,</div><div></div><div>Hope you're doing great.</div>",
     "y\ne\ns",
-    "Hello every\none",
   ];
 
   return NextResponse.json(
     tests.map(input => ({
       input,
       output: htmlToMarkdown(input),
-      outputEscaped: JSON.stringify(htmlToMarkdown(input)),
     }))
   );
 }
