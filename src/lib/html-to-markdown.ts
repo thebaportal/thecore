@@ -24,6 +24,11 @@ function decodeEntities(html: string): string {
 export function htmlToMarkdown(html: string): string {
   let md = html;
 
+  // HTML collapses bare whitespace (including \n) between words to a single space.
+  // Normalize single newlines to spaces so "y\ne\ns" → "y e s", not 3 lines.
+  // Double-newlines (\n\n) are left alone — they survive later collapse handling.
+  md = md.replace(/(?<=[^\n])\n(?=[^\n])/g, " ");
+
   md = md.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, t: string) => `# ${t.trim()}\n\n`);
   md = md.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, t: string) => `## ${t.trim()}\n\n`);
   md = md.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, t: string) => `### ${t.trim()}\n\n`);
