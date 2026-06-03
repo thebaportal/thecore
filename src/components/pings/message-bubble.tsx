@@ -50,25 +50,42 @@ function AttachmentList({ attachments }: { attachments: Attachment[] }) {
   );
 }
 
-function renderMention(name: string, display: string, membersByName: Record<string, string>, key: number): React.ReactNode {
-  const userId = membersByName[name];
-  const chip = <span className="text-primary font-semibold cursor-pointer hover:underline">@{name}</span>;
-  if (userId) return <UserCard key={key} userId={userId} side="top" align="center">{chip}</UserCard>;
-  return <span key={key} className="text-primary font-semibold">{display}</span>;
+function renderMention(name: string, userId: string, key: number): React.ReactNode {
+  const chip = (
+    <span className="inline-flex items-center text-primary font-semibold cursor-pointer bg-primary/8 hover:bg-primary/15 rounded px-1 py-0.5 transition-colors text-[0.9em] leading-none">
+      @{name}
+    </span>
+  );
+  return <UserCard key={key} userId={userId} side="top" align="center">{chip}</UserCard>;
 }
 
 function renderInline(text: string, membersByName?: Record<string, string>): React.ReactNode[] {
-  // Split on markdown bold/italic AND plain @mentions
-  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|@\S+(?:\s+\S+){0,3})/g);
+  // Split on bold/italic, structured mention tokens @[Name](userId), and legacy @mentions
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|@\[[^\]]+\]\([^)]+\)|@\S+(?:\s+\S+){0,3})/g);
   const nodes: React.ReactNode[] = [];
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]!;
 
+    // Structured mention: @[Display Name](userId)
+    if (part.startsWith("@[")) {
+      const m = /^@\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+      if (m) {
+        nodes.push(renderMention(m[1]!, m[2]!, i));
+        continue;
+      }
+    }
+
     if (part.startsWith("**") && part.endsWith("**")) {
       const inner = part.slice(2, -2);
       if (inner.startsWith("@") && membersByName) {
-        nodes.push(renderMention(inner.slice(1), inner, membersByName, i));
+        const name = inner.slice(1);
+        const userId = membersByName[name];
+        if (userId) {
+          nodes.push(renderMention(name, userId, i));
+        } else {
+          nodes.push(<strong key={i}>{inner}</strong>);
+        }
         // Inject a space when the mention runs directly into the next word (e.g. **@Olivier**are)
         const next = parts[i + 1];
         if (next && /^\w/.test(next)) nodes.push(" ");
@@ -85,14 +102,13 @@ function renderInline(text: string, membersByName?: Record<string, string>): Rea
 
     if (part.startsWith("@") && membersByName) {
       // Try progressively shorter suffixes until we find a member name match
-      // e.g. "@Omojo Amanyi extra" → try "Omojo Amanyi extra", "Omojo Amanyi", "Omojo"
       const words = part.slice(1).split(" ");
       let matched = false;
       for (let len = words.length; len >= 1; len--) {
         const candidate = words.slice(0, len).join(" ");
         if (membersByName[candidate]) {
           const remainder = words.slice(len).join(" ");
-          nodes.push(renderMention(candidate, `@${candidate}`, membersByName, i));
+          nodes.push(renderMention(candidate, membersByName[candidate]!, i));
           if (remainder) nodes.push(` ${remainder}`);
           matched = true;
           break;
@@ -173,7 +189,8 @@ function MessageBody({ body, attachments, isOwn, membersByName }: { body: string
 }
 
 function InlineEdit({ messageId, initialBody, onDone }: { messageId: string; initialBody: string; onDone: () => void }) {
-  const [value, setValue] = useState(initialBody);
+  // Decode @[Name](id) → @Name so the textarea stays human-readable while editing
+  const [value, setValue] = useState(() => initialBody.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1"));
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLTextAreaElement>(null);
 

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { createProjectPost, updateProjectPost, togglePinPost, deleteProjectPost } from "@/actions/posts";
 import type { PostCategory } from "@/lib/post-categories";
 import { UserAvatar } from "@/components/users/user-avatar";
+import { RichText } from "@/components/shared/rich-text";
 import { cn } from "@/lib/utils";
 
 type Reply = {
@@ -35,25 +36,6 @@ function fmt(d: Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function renderWithLinks(text: string) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.split(urlRegex).map((part, i) =>
-    /^https?:\/\//.test(part) ? (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noreferrer noopener"
-        className="text-primary underline break-all hover:opacity-80"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {part}
-      </a>
-    ) : (
-      <span key={i}>{part}</span>
-    )
-  );
-}
 
 function CategoryBadge({ category, emoji }: { category: string; emoji?: string }) {
   return (
@@ -536,7 +518,7 @@ function PostCard({
           <div className="px-5 pt-4 pb-3">
             <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
               {post.body
-                ? renderWithLinks(post.body)
+                ? <RichText text={post.body} />
                 : <span className="italic text-muted-foreground/50">No body.</span>}
             </p>
           </div>
@@ -559,7 +541,7 @@ function PostCard({
                       <span className="ml-2 font-normal text-muted-foreground/60">{fmt(reply.createdAt)}</span>
                     </p>
                     <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap mt-0.5">
-                      {renderWithLinks(reply.body)}
+                      <RichText text={reply.body} />
                     </p>
                   </div>
                 </div>

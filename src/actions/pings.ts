@@ -6,6 +6,27 @@ import { db } from "@/lib/db";
 import { createPingSchema, sendMessageSchema, type CreatePingInput, type SendMessageInput } from "@/lib/validations/ping";
 import { createNotificationsForUsers } from "@/lib/notifications";
 
+// Converts @Name mentions to @[Name](userId) tokens and returns enriched body + mention IDs.
+async function enrichMentions(body: string, orgId: string): Promise<{ enrichedBody: string; mentionIds: string[] }> {
+  const names = [...body.matchAll(/@([\w\s]+?)(?=\s|$|@)/g)]
+    .map((m) => m[1]?.trim())
+    .filter((n): n is string => !!n);
+  if (names.length === 0) return { enrichedBody: body, mentionIds: [] };
+
+  const users = await db.user.findMany({
+    where: { name: { in: names }, memberships: { some: { organizationId: orgId } } },
+    select: { id: true, name: true },
+  });
+  if (users.length === 0) return { enrichedBody: body, mentionIds: [] };
+
+  const nameToId = new Map(users.map((u) => [u.name, u.id]));
+  const enrichedBody = body.replace(/@([\w\s]+?)(?=\s|$|@)/g, (match, rawName) => {
+    const id = nameToId.get(rawName.trim());
+    return id ? `@[${rawName.trim()}](${id})` : match;
+  });
+  return { enrichedBody, mentionIds: users.map((u) => u.id) };
+}
+
 async function getDbContext() {
   const { userId, orgId } = await auth();
   if (!userId || !orgId) throw new Error("Unauthenticated");
@@ -224,11 +245,13 @@ export async function sendMessage(input: SendMessageInput) {
   const isParticipant = ping.participants.some((p) => p.userId === user.id);
   if (!isParticipant) throw new Error("Not a participant");
 
+  const { enrichedBody, mentionIds: rawMentionIds } = await enrichMentions(validated.body, org.id);
+
   const message = await db.message.create({
     data: {
       pingId: validated.pingId,
       authorId: user.id,
-      body: validated.body,
+      body: enrichedBody,
       threadParentId: validated.threadParentId,
       attachments: validated.attachments?.length
         ? { create: validated.attachments.map((a) => ({ url: a.url, name: a.name, mimeType: a.mimeType, size: a.size })) }
@@ -254,29 +277,17 @@ export async function sendMessage(input: SendMessageInput) {
     data: { lastReadAt: new Date() },
   });
 
-  // Fire CHAT_MENTION notifications for @mentions in the message body
-  const mentionedNames = [...validated.body.matchAll(/@([\w\s]+?)(?=\s|$|@)/g)]
-    .map((m) => m[1]?.trim())
-    .filter((n): n is string => !!n);
-  if (mentionedNames.length > 0) {
-    const mentionedUsers = await db.user.findMany({
-      where: {
-        name: { in: mentionedNames },
-        memberships: { some: { organizationId: org.id } },
-      },
-      select: { id: true },
-    });
-    const mentionIds = mentionedUsers.map((u) => u.id).filter((uid) => uid !== user.id);
-    if (mentionIds.length > 0) {
-      const pingContext = ping.projectId
-        ? { href: `/projects/${ping.projectId}/messages` }
-        : { href: `/inbox/${validated.pingId}` };
-      void createNotificationsForUsers(org.id, mentionIds, "CHAT_MENTION", {
-        title: `${user.name} mentioned you in a message`,
-        body: validated.body.slice(0, 100),
-        href: pingContext.href,
-      }, org.name);
-    }
+  // Fire CHAT_MENTION notifications
+  const mentionIds = rawMentionIds.filter((uid) => uid !== user.id);
+  if (mentionIds.length > 0) {
+    const pingContext = ping.projectId
+      ? { href: `/projects/${ping.projectId}/messages` }
+      : { href: `/inbox/${validated.pingId}` };
+    void createNotificationsForUsers(org.id, mentionIds, "CHAT_MENTION", {
+      title: `${user.name} mentioned you in a message`,
+      body: validated.body.slice(0, 100),
+      href: pingContext.href,
+    }, org.name);
   }
 
   revalidatePath(`/inbox/${validated.pingId}`);
@@ -382,9 +393,11 @@ export async function editMessage(messageId: string, body: string) {
   });
   if (!ping) throw new Error("Not found");
 
+  const { enrichedBody } = await enrichMentions(trimmed, org.id);
+
   await db.message.update({
     where: { id: messageId },
-    data: { body: trimmed, editedAt: new Date() },
+    data: { body: enrichedBody, editedAt: new Date() },
   });
 
   revalidatePath(`/inbox/${message.pingId}`);

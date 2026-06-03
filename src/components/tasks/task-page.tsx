@@ -13,6 +13,7 @@ import { addTaskComment, deleteTaskComment } from "@/actions/comments";
 import { createPing, sendMessage } from "@/actions/pings";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { RichText } from "@/components/shared/rich-text";
 import { cn } from "@/lib/utils";
 
 const STATUSES = [
@@ -462,7 +463,7 @@ export function TaskPage({
                           {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                         </span>
                       </div>
-                      <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{c.body}</p>
+                      <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap break-words leading-relaxed"><RichText text={c.body} /></p>
                     </div>
                     {currentUserId === c.author.id && (
                       <button

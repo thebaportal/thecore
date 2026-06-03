@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { formatDistanceToNow, format } from "date-fns";
 import { Megaphone, Plus, Trash2, Loader2, X, AlertTriangle, ChevronDown } from "lucide-react";
 import { createAnnouncement, deleteAnnouncement } from "@/actions/announcements";
+import { RichText } from "@/components/shared/rich-text";
 
 type Announcement = {
   id: string;
@@ -126,30 +127,6 @@ function DeleteConfirm({ onConfirm, onCancel, pending }: { onConfirm: () => void
   );
 }
 
-const URL_REGEX = /(https?:\/\/[^\s]+)/g;
-
-function LinkedText({ text }: { text: string }) {
-  const parts = text.split(URL_REGEX);
-  return (
-    <>
-      {parts.map((part, i) =>
-        URL_REGEX.test(part) ? (
-          <a
-            key={i}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline underline-offset-2 hover:opacity-80 break-all"
-          >
-            {part}
-          </a>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-}
 
 export function AnnouncementsView({ announcements, isAdmin }: { announcements: Announcement[]; isAdmin: boolean }) {
   const [showNew, setShowNew]           = useState(false);
@@ -249,7 +226,7 @@ export function AnnouncementsView({ announcements, isAdmin }: { announcements: A
                 {isOpen && (
                   <div className="px-5 pb-5 pt-1 border-t border-border/50">
                     <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap pl-11">
-                      <LinkedText text={a.body} />
+                      <RichText text={a.body} />
                     </p>
                   </div>
                 )}
