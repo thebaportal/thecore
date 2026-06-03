@@ -137,7 +137,7 @@ function MessageBody({ body, attachments, isOwn, membersByName }: { body: string
 
   return (
     <div className={cn(
-      "inline-block max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+      "inline-block rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
       isOwn
         ? "bg-primary/10 text-foreground rounded-tl-sm"
         : "bg-muted/70 text-foreground rounded-tl-sm",
@@ -331,7 +331,7 @@ export function MessageBubble({
           <>
             {/* Bubble + hover actions sit inline so actions are right next to the text */}
             <div className="flex items-center gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 max-w-[85%]">
                 <MessageBody body={message.body} attachments={message.attachments} isOwn={isOwn} membersByName={membersByName} />
                 {message.editedAt && (
                   <span className="text-[9px] text-muted-foreground/50 mt-0.5 ml-1 select-none">(edited)</span>
