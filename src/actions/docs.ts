@@ -111,13 +111,31 @@ export async function getProjectFolders(projectId: string, parentId: string | nu
   });
 }
 
-export async function getFolderBreadcrumb(folderId: string): Promise<{ id: string; name: string }[]> {
+export async function getFolderBreadcrumb(folderId: string, projectId?: string): Promise<{ id: string; name: string }[]> {
   const org = await getOrg();
   if (!org) return [];
 
+  if (projectId) {
+    // Bulk-fetch all folders for the project, then traverse in-memory — O(1) DB round-trips
+    const allFolders = await db.docFolder.findMany({
+      where: { projectId, organizationId: org.id },
+      select: { id: true, name: true, parentId: true },
+    });
+    const map = new Map(allFolders.map((f) => [f.id, f]));
+    const crumbs: { id: string; name: string }[] = [];
+    let currentId: string | null = folderId;
+    while (currentId) {
+      const row = map.get(currentId);
+      if (!row) break;
+      crumbs.unshift({ id: row.id, name: row.name });
+      currentId = row.parentId;
+    }
+    return crumbs;
+  }
+
+  // Fallback for callers that don't have projectId (sequential queries)
   const crumbs: { id: string; name: string }[] = [];
   let currentId: string | null = folderId;
-
   while (currentId) {
     const row: { id: string; name: string; parentId: string | null } | null =
       await db.docFolder.findUnique({
@@ -128,7 +146,6 @@ export async function getFolderBreadcrumb(folderId: string): Promise<{ id: strin
     crumbs.unshift({ id: row.id, name: row.name });
     currentId = row.parentId;
   }
-
   return crumbs;
 }
 

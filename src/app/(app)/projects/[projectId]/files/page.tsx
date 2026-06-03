@@ -15,7 +15,7 @@ export default async function ProjectFilesPage({
   const [folders, files, breadcrumb] = await Promise.all([
     getProjectFolders(projectId, folderId ?? null),
     getProjectFiles(projectId, folderId ?? null),
-    folderId ? getFolderBreadcrumb(folderId) : Promise.resolve([]),
+    folderId ? getFolderBreadcrumb(folderId, projectId) : Promise.resolve([]),
   ]);
 
   return (

@@ -613,6 +613,32 @@ async function resolveBasecampUser(
   }
 }
 
+async function importLineReactions(
+  messageId: string,
+  reactionsUrl: string,
+  token: string,
+  orgId: string,
+  fallbackUserId: string
+): Promise<void> {
+  try {
+    const reactions = await bcFetchFullUrl<BCReaction>(reactionsUrl, token);
+    for (const reaction of reactions) {
+      try {
+        const userId = await resolveBasecampUser(reaction.person, orgId, fallbackUserId);
+        await db.reaction.upsert({
+          where: { messageId_userId_emoji: { messageId, userId, emoji: reaction.content } },
+          create: { messageId, userId, emoji: reaction.content },
+          update: {},
+        });
+      } catch {
+        // individual reaction failure is non-fatal
+      }
+    }
+  } catch {
+    // reactions fetch failure is non-fatal — don't block the rest of the import
+  }
+}
+
 // ── Explicit project people import ───────────────────────────────────────────
 // Calls the Basecamp people-on-project endpoint and upserts ProjectMember rows.
 // Runs after the project row is created; non-fatal if it fails.
@@ -941,10 +967,11 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
         try {
           const authorId = await resolveBasecampUser(line.creator, org.id, user.id);
           campfireParticipants.add(authorId);
+          const messageId = `bc-campfire-line-${bcProjectId}-${line.id}`;
           await db.message.upsert({
-            where: { id: `bc-campfire-line-${bcProjectId}-${line.id}` },
+            where: { id: messageId },
             create: {
-              id: `bc-campfire-line-${bcProjectId}-${line.id}`,
+              id: messageId,
               pingId: campfirePingId,
               authorId,
               body: htmlToMarkdown(content),
@@ -953,6 +980,9 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
             },
             update: { body: htmlToMarkdown(content) },
           });
+          if (line.reactions_url) {
+            await importLineReactions(messageId, line.reactions_url, token, org.id, user.id);
+          }
           campfireMessages++;
         } catch (e) {
           errors.push(`⚠ Campfire line ${line.id}: ${String(e)}`);
@@ -2083,10 +2113,11 @@ export async function backfillCampfire(): Promise<CampfireBackfillResult> {
         try {
           const authorId = await resolveBasecampUser(line.creator, org.id, user.id);
           participants.add(authorId);
+          const messageId = `bc-campfire-line-${bcProjectId}-${line.id}`;
           await db.message.upsert({
-            where: { id: `bc-campfire-line-${bcProjectId}-${line.id}` },
+            where: { id: messageId },
             create: {
-              id: `bc-campfire-line-${bcProjectId}-${line.id}`,
+              id: messageId,
               pingId,
               authorId,
               body: htmlToMarkdown(line.content),
@@ -2095,6 +2126,9 @@ export async function backfillCampfire(): Promise<CampfireBackfillResult> {
             },
             update: { body: htmlToMarkdown(line.content) },
           });
+          if (line.reactions_url) {
+            await importLineReactions(messageId, line.reactions_url, token, org.id, user.id);
+          }
           messagesImported++;
         } catch (e) {
           if ((e as { code?: string })?.code === "P2002") continue;
@@ -2208,6 +2242,13 @@ type BCLine = {
   content: string;
   created_at: string;
   creator: { id: number; name: string; email_address: string };
+  reactions_url?: string;
+};
+
+type BCReaction = {
+  id: number;
+  content: string;
+  person: { id: number; name: string; email_address: string };
 };
 
 export type ImportPingsResult = {
