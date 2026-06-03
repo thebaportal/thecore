@@ -29,60 +29,87 @@ async function requireAdmin() {
 
 // ─── Queries (available to all org members) ───────────────────────────────────
 
-export async function getLibraryFolders(parentId: string | null = null) {
+// Single consolidated fetch — one auth() call, one org lookup, everything parallel
+export async function getLibraryContents(folderId: string | null = null) {
   const { orgId } = await auth();
-  if (!orgId) return [];
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return [];
-
-  return db.docFolder.findMany({
-    where: { organizationId: org.id, projectId: { equals: null }, isTemplate: false, parentId },
-    orderBy: { name: "asc" },
-    include: {
-      _count: { select: { docs: true, children: true, files: true } },
-      docs: { select: { title: true, emoji: true }, take: 4, orderBy: { updatedAt: "desc" } },
-      files: { select: { name: true }, take: 3, orderBy: { createdAt: "desc" } },
-    },
+  if (!orgId) return null;
+  const org = await db.organization.findUnique({
+    where: { clerkOrgId: orgId },
+    select: { id: true, libraryNote: true },
   });
+  if (!org) return null;
+
+  const base = { organizationId: org.id, projectId: { equals: null as null }, isTemplate: false };
+
+  const [folders, docs, files, allFolders] = await Promise.all([
+    db.docFolder.findMany({
+      where: { ...base, parentId: folderId },
+      orderBy: { name: "asc" },
+      include: {
+        _count: { select: { docs: true, children: true, files: true } },
+        docs:  { select: { title: true, emoji: true }, take: 4, orderBy: { updatedAt: "desc" } },
+        files: { select: { name: true }, take: 3, orderBy: { createdAt: "desc" } },
+      },
+    }),
+    db.doc.findMany({
+      where: { ...base, folderId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true, title: true, emoji: true, content: true, createdAt: true, updatedAt: true,
+        author: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    }),
+    db.projectFile.findMany({
+      where: { ...base, folderId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, name: true, url: true, utKey: true, mimeType: true, size: true, createdAt: true,
+        uploadedBy: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    }),
+    // Fetch all folders once to build breadcrumb in-memory (no N+1 loop)
+    folderId
+      ? db.docFolder.findMany({
+          where: { organizationId: org.id, projectId: null, isTemplate: false },
+          select: { id: true, name: true, parentId: true },
+        })
+      : Promise.resolve([] as { id: string; name: string; parentId: string | null }[]),
+  ]);
+
+  // Build breadcrumb from in-memory map — O(depth), 0 extra DB queries
+  const breadcrumb: { id: string; name: string }[] = [];
+  if (folderId && allFolders.length > 0) {
+    const map = new Map(allFolders.map((f) => [f.id, f]));
+    let cur = map.get(folderId);
+    while (cur) {
+      breadcrumb.unshift({ id: cur.id, name: cur.name });
+      cur = cur.parentId ? map.get(cur.parentId) : undefined;
+    }
+  }
+
+  return { folders, docs, files, breadcrumb, note: org.libraryNote ?? null };
+}
+
+// Keep individual exports for backward compatibility with other callers
+export async function getLibraryFolders(parentId: string | null = null) {
+  const result = await getLibraryContents(parentId);
+  return result?.folders ?? [];
 }
 
 export async function getLibraryDocs(folderId: string | null = null) {
-  const { orgId } = await auth();
-  if (!orgId) return [];
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return [];
-
-  return db.doc.findMany({
-    where: { organizationId: org.id, projectId: { equals: null }, isTemplate: false, folderId },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true, title: true, emoji: true, createdAt: true, updatedAt: true,
-      content: true,
-      author: { select: { id: true, name: true, avatarUrl: true } },
-    },
-  });
+  const result = await getLibraryContents(folderId);
+  return (result?.docs ?? []) as (typeof result extends null ? never[] : NonNullable<typeof result>["docs"]);
 }
 
 export async function getLibraryFiles(folderId: string | null = null) {
-  const { orgId } = await auth();
-  if (!orgId) return [];
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return [];
-
-  return db.projectFile.findMany({
-    where: { organizationId: org.id, projectId: { equals: null }, isTemplate: false, folderId },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true, name: true, url: true, utKey: true, mimeType: true, size: true, createdAt: true,
-      uploadedBy: { select: { id: true, name: true, avatarUrl: true } },
-    },
-  });
+  const result = await getLibraryContents(folderId);
+  return result?.files ?? [];
 }
 
 export async function getLibraryDoc(docId: string) {
   const { orgId } = await auth();
   if (!orgId) return null;
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
+  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId }, select: { id: true } });
   if (!org) return null;
 
   return db.doc.findFirst({
@@ -92,24 +119,8 @@ export async function getLibraryDoc(docId: string) {
 }
 
 export async function getLibraryFolderBreadcrumb(folderId: string): Promise<{ id: string; name: string }[]> {
-  const { orgId } = await auth();
-  if (!orgId) return [];
-  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId } });
-  if (!org) return [];
-
-  const crumbs: { id: string; name: string }[] = [];
-  let currentId: string | null = folderId;
-  while (currentId) {
-    const row: { id: string; name: string; parentId: string | null } | null =
-      await db.docFolder.findUnique({
-        where: { id: currentId, organizationId: org.id },
-        select: { id: true, name: true, parentId: true },
-      });
-    if (!row) break;
-    crumbs.unshift({ id: row.id, name: row.name });
-    currentId = row.parentId;
-  }
-  return crumbs;
+  const result = await getLibraryContents(folderId);
+  return result?.breadcrumb ?? [];
 }
 
 export async function searchLibraryItems(query: string) {
