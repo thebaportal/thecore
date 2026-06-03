@@ -8,14 +8,9 @@ import {
   Activity, Users2, Settings, ChevronLeft, ChevronRight,
   BookOpen, LayoutTemplate, MessageCircle, HelpCircle, Megaphone,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { UserButton } from "@clerk/nextjs";
+import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { cn } from "@/lib/utils";
-
-const OrganizationSwitcher = dynamic(
-  () => import("@clerk/nextjs").then((m) => ({ default: m.OrganizationSwitcher })),
-  { ssr: false, loading: () => <div className="h-8 w-full rounded-lg bg-muted animate-pulse" /> }
-);
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
   if (collapsed) return <div className="my-1 border-t border-sidebar-border/50" />;
@@ -172,15 +167,7 @@ export function Sidebar({
       )}>
         {!isStudent && !collapsed && (
           <div className="px-1">
-            <OrganizationSwitcher
-              appearance={{
-                elements: {
-                  rootBox: "w-full",
-                  organizationSwitcherTrigger:
-                    "w-full justify-start px-2 py-1.5 rounded-lg hover:bg-muted text-sidebar-foreground text-sm",
-                },
-              }}
-            />
+            <OrgSwitcher orgLogoUrl={orgLogoUrl} orgName={orgName} />
           </div>
         )}
         <div className={cn("flex items-center", collapsed ? "justify-center" : "px-1")}>

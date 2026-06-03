@@ -133,12 +133,12 @@ async function getOverdueTaskCount(clerkUserId: string, clerkOrgId: string) {
 async function getOrgBranding(clerkOrgId: string) {
   const org = await db.organization.findUnique({
     where: { clerkOrgId },
-    select: { name: true, logoUrl: true },
+    select: { name: true, logoUrl: true, brandColor: true },
   });
   // Clerk auto-generates a colored square for every org — ignore those.
   // Only use logoUrl when it comes from our own storage (non-Clerk CDN).
   const logoUrl = org?.logoUrl && !org.logoUrl.includes("clerk") ? org.logoUrl : null;
-  return { orgName: org?.name ?? "", orgLogoUrl: logoUrl };
+  return { orgName: org?.name ?? "", orgLogoUrl: logoUrl, orgBrandColor: org?.brandColor ?? null };
 }
 
 export async function AppShell({
@@ -157,7 +157,7 @@ export async function AppShell({
     userId && orgId ? getUnreadPingCount(userId, orgId) : Promise.resolve(0),
     getUserNotifications(),
     userId && orgId ? getOverdueTaskCount(userId, orgId) : Promise.resolve(0),
-    orgId ? getOrgBranding(orgId) : Promise.resolve({ orgName: "", orgLogoUrl: null }),
+    orgId ? getOrgBranding(orgId) : Promise.resolve({ orgName: "", orgLogoUrl: null, orgBrandColor: null }),
   ]);
 
   return (
@@ -170,6 +170,7 @@ export async function AppShell({
         studentProjectId={studentProjectId}
         orgLogoUrl={branding.orgLogoUrl}
         orgName={branding.orgName}
+        orgBrandColor={branding.orgBrandColor}
       >
         {children}
       </ShellLayout>

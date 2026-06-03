@@ -18,6 +18,7 @@ import {
 } from "@/actions/library";
 import { useUploadThing } from "@/lib/uploadthing";
 import { Button } from "@/components/ui/button";
+import { WorkspaceBanner } from "@/components/shared/workspace-banner";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -324,6 +325,7 @@ export function LibraryView({
   importProjects,
   note,
   onSaveNote,
+  orgBranding = null,
 }: {
   folders: LibraryFolder[];
   docs: LibraryDoc[];
@@ -334,6 +336,7 @@ export function LibraryView({
   importProjects: ImportProject[];
   note: string | null;
   onSaveNote: (note: string) => Promise<void>;
+  orgBranding?: { logoUrl: string | null; orgName: string } | null;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -517,6 +520,15 @@ export function LibraryView({
           <CloudUpload className="w-10 h-10 text-primary/70" />
           <p className="text-sm font-medium text-primary">Drop files to upload</p>
         </div>
+      )}
+
+      {/* Workspace branding — root level only */}
+      {breadcrumb.length === 0 && orgBranding?.orgName && (
+        <WorkspaceBanner
+          orgLogoUrl={orgBranding.logoUrl}
+          orgName={orgBranding.orgName}
+          className="mb-5"
+        />
       )}
 
       {/* Header */}

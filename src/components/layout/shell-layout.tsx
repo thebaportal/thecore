@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { hexToHslValues, getForegroundHsl } from "@/lib/brand-color";
 import type { Notification } from "@/components/layout/notifications-panel";
 
 export function ShellLayout({
@@ -14,6 +15,7 @@ export function ShellLayout({
   studentProjectId = null,
   orgLogoUrl = null,
   orgName = "",
+  orgBrandColor = null,
 }: {
   children: React.ReactNode;
   unreadPings: number;
@@ -23,11 +25,20 @@ export function ShellLayout({
   studentProjectId?: string | null;
   orgLogoUrl?: string | null;
   orgName?: string;
+  orgBrandColor?: string | null;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const brandHsl = orgBrandColor ? hexToHslValues(orgBrandColor) : null;
+  const brandStyle = brandHsl
+    ? ({
+        "--primary": brandHsl,
+        "--primary-foreground": getForegroundHsl(orgBrandColor!),
+      } as React.CSSProperties)
+    : undefined;
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background" style={brandStyle}>
       {/* Mobile backdrop */}
       {mobileOpen && (
         <div

@@ -5,6 +5,7 @@ import {
   getLibraryFolders, getLibraryDocs, getLibraryFiles,
   getLibraryFolderBreadcrumb, getProjectsForImport, getLibraryNote, updateLibraryNote,
 } from "@/actions/library";
+import { getOrgBrandingSettings } from "@/actions/org-branding";
 import { LibraryView } from "@/components/library/library-view";
 
 export const metadata: Metadata = { title: "Library" };
@@ -25,13 +26,14 @@ export default async function LibraryPage({
     if (breadcrumb.length === 0) redirect("/library");
   }
 
-  const [folders, docs, files, breadcrumb, importProjects, note] = await Promise.all([
+  const [folders, docs, files, breadcrumb, importProjects, note, branding] = await Promise.all([
     getLibraryFolders(folderId),
     getLibraryDocs(folderId),
     getLibraryFiles(folderId),
     folderId ? getLibraryFolderBreadcrumb(folderId) : Promise.resolve([]),
     isAdmin ? getProjectsForImport() : Promise.resolve([]),
     getLibraryNote(),
+    getOrgBrandingSettings(),
   ]);
 
   return (
@@ -45,6 +47,7 @@ export default async function LibraryPage({
       importProjects={importProjects}
       note={note}
       onSaveNote={updateLibraryNote}
+      orgBranding={branding ? { logoUrl: branding.logoUrl, orgName: branding.name } : null}
     />
   );
 }

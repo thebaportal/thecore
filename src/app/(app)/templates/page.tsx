@@ -5,6 +5,7 @@ import {
   getTemplateFolders, getTemplateDocs, getTemplateFiles,
   getTemplateFolderBreadcrumb, getProjectsForTemplateImport, getTemplatesNote, updateTemplatesNote,
 } from "@/actions/templates";
+import { getOrgBrandingSettings } from "@/actions/org-branding";
 import { TemplatesView } from "@/components/library/templates-view";
 
 export const metadata: Metadata = { title: "Templates" };
@@ -26,13 +27,14 @@ export default async function TemplatesPage({
     if (breadcrumb.length === 0) redirect("/templates");
   }
 
-  const [folders, docs, files, breadcrumb, importProjects, note] = await Promise.all([
+  const [folders, docs, files, breadcrumb, importProjects, note, branding] = await Promise.all([
     getTemplateFolders(folderId),
     getTemplateDocs(folderId),
     getTemplateFiles(folderId),
     folderId ? getTemplateFolderBreadcrumb(folderId) : Promise.resolve([]),
     getProjectsForTemplateImport(),
     getTemplatesNote(),
+    getOrgBrandingSettings(),
   ]);
 
   return (
@@ -45,6 +47,7 @@ export default async function TemplatesPage({
       importProjects={importProjects}
       note={note}
       onSaveNote={updateTemplatesNote}
+      orgBranding={branding ? { logoUrl: branding.logoUrl, orgName: branding.name } : null}
     />
   );
 }

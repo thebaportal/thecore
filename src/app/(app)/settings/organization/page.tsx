@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { OrganizationProfile } from "@clerk/nextjs";
 import { getOrgPostCategories } from "@/actions/posts";
+import { getOrgBrandingSettings } from "@/actions/org-branding";
 import { PostCategoriesEditor } from "@/components/settings/post-categories-editor";
+import { OrgBrandingForm } from "@/components/settings/org-branding-form";
 
 export const metadata: Metadata = { title: "Organization Settings" };
 
 export default async function OrganizationSettingsPage() {
-  const categories = await getOrgPostCategories();
+  const [categories, branding] = await Promise.all([
+    getOrgPostCategories(),
+    getOrgBrandingSettings(),
+  ]);
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -30,6 +35,22 @@ export default async function OrganizationSettingsPage() {
           },
         }}
       />
+
+      {/* Workspace branding */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Workspace branding</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Logo and brand colors appear in the sidebar, library, and across the workspace.
+          </p>
+        </div>
+        <OrgBrandingForm
+          initialLogoUrl={branding?.logoUrl ?? null}
+          initialBrandColor={branding?.brandColor ?? null}
+          initialSecondaryColor={branding?.secondaryColor ?? null}
+          orgName={branding?.name ?? ""}
+        />
+      </div>
 
       {/* Post categories */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">

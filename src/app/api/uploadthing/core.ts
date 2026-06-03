@@ -24,6 +24,34 @@ export const ourFileRouter = {
       return { url: file.ufsUrl };
     }),
 
+  orgLogoUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const { userId, orgId } = await auth();
+      if (!userId || !orgId) throw new Error("Unauthorized");
+      const [user, org] = await Promise.all([
+        db.user.findUnique({ where: { clerkUserId: userId } }),
+        db.organization.findUnique({ where: { clerkOrgId: orgId } }),
+      ]);
+      if (!user || !org) throw new Error("Not found");
+      const membership = await db.orgMembership.findUnique({
+        where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
+        select: { role: true },
+      });
+      if (membership?.role !== "OWNER" && membership?.role !== "ADMIN") {
+        throw new Error("Only admins can update org logo");
+      }
+      return { orgId: org.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      await db.organization.update({
+        where: { id: metadata.orgId },
+        data: { logoUrl: file.ufsUrl },
+      });
+      revalidatePath("/settings/organization");
+      revalidatePath("/");
+      return { url: file.ufsUrl };
+    }),
+
   projectFileUploader: f({
     image:              { maxFileSize: "8MB",  maxFileCount: 10 },
     pdf:                { maxFileSize: "32MB", maxFileCount: 5  },
