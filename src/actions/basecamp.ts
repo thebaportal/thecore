@@ -1645,11 +1645,11 @@ export async function importBasecampPeople(): Promise<PeopleImportResult> {
 
     const bcTitle = bcp.title?.trim() || null;
 
-    // Already fully linked — backfill jobTitle and avatarUrl if not yet set
+    // Already fully linked — sync avatarUrl from Basecamp (always), jobTitle if not set
     if (existingCoreUserId) {
       if (bcp.avatar_url) {
-        await db.user.updateMany({
-          where: { id: existingCoreUserId, avatarUrl: null },
+        await db.user.update({
+          where: { id: existingCoreUserId },
           data: { avatarUrl: bcp.avatar_url },
         });
       }
@@ -1682,8 +1682,8 @@ export async function importBasecampPeople(): Promise<PeopleImportResult> {
         update: { coreUserId: matchedUserId, basecampName: bcp.name, basecampEmail: email },
       });
       if (bcp.avatar_url) {
-        await db.user.updateMany({
-          where: { id: matchedUserId, avatarUrl: null },
+        await db.user.update({
+          where: { id: matchedUserId },
           data: { avatarUrl: bcp.avatar_url },
         });
       }
