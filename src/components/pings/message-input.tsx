@@ -218,11 +218,10 @@ export function MessageInput({
                 i === mentionIndex ? "bg-primary/8 text-primary" : "hover:bg-muted text-foreground"
               )}
             >
-              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold shrink-0 overflow-hidden">
-                {m.avatarUrl
-                  ? <img src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" />
-                  : m.name[0]?.toUpperCase()}
-              </div>
+              {m.avatarUrl
+                ? <img src={m.avatarUrl} alt={m.name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                : <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold shrink-0">{m.name[0]?.toUpperCase()}</div>
+              }
               <span className="text-sm truncate">{m.name}</span>
             </button>
           ))}
