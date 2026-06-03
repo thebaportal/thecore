@@ -42,16 +42,16 @@ export async function POST() {
       return NextResponse.json({ message: "Already correct — no migration needed", debug });
     }
 
-    // Point the real org to the production Clerk org ID
+    // Delete the empty shell org FIRST (frees up the clerkOrgId unique constraint)
+    if (currentOrg) {
+      await db.organization.delete({ where: { id: currentOrg.id } });
+    }
+
+    // Now point the real org to the production Clerk org ID
     await db.organization.update({
       where: { id: realOrg.id },
       data: { clerkOrgId: orgId },
     });
-
-    // Delete the empty shell org that was auto-created
-    if (currentOrg) {
-      await db.organization.delete({ where: { id: currentOrg.id } });
-    }
 
     return NextResponse.json({
       success: true,
