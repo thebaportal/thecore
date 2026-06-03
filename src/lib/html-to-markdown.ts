@@ -65,11 +65,12 @@ export function htmlToMarkdown(html: string): string {
 
   // ── Basecamp-specific elements ───────────────────────────────────────────
   // @mentions: <bc-attachment content-type="application/vnd.basecamp.mention">Name</bc-attachment>
+  // Always emit a trailing space so the mention never concatenates directly into the next word.
   md = md.replace(
     /<bc-attachment[^>]*content-type=["']application\/vnd\.basecamp\.mention["'][^>]*>([\s\S]*?)<\/bc-attachment>/gi,
     (_, inner: string) => {
       const name = inner.replace(/<[^>]+>/g, "").trim();
-      return name ? `**@${name}**` : "";
+      return name ? `**@${name}** ` : "";
     }
   );
 

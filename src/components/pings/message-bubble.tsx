@@ -69,6 +69,9 @@ function renderInline(text: string, membersByName?: Record<string, string>): Rea
       const inner = part.slice(2, -2);
       if (inner.startsWith("@") && membersByName) {
         nodes.push(renderMention(inner.slice(1), inner, membersByName, i));
+        // Inject a space when the mention runs directly into the next word (e.g. **@Olivier**are)
+        const next = parts[i + 1];
+        if (next && /^\w/.test(next)) nodes.push(" ");
       } else {
         nodes.push(<strong key={i}>{inner}</strong>);
       }
