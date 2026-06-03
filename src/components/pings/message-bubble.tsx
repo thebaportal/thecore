@@ -144,7 +144,7 @@ function MessageBody({ body, attachments, isOwn, membersByName }: { body: string
     )}>
       <div className="relative">
         <MarkdownBody text={body} membersByName={membersByName} className={cn(
-          "break-words",
+          "break-words whitespace-pre-wrap",
           isLong && !expanded && "line-clamp-6"
         )} />
         {isLong && !expanded && (
