@@ -292,16 +292,17 @@ export function MessageBubble({
       <div className="w-10 shrink-0 flex flex-col items-center">
         {!grouped ? (
           <UserCard userId={message.author.id} side="right" align="start">
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold cursor-pointer shrink-0 overflow-hidden",
-              isOwn
-                ? "bg-primary/15 text-primary ring-2 ring-primary/20"
-                : "bg-muted text-foreground ring-1 ring-border"
-            )}>
-              {message.author.avatarUrl
-                ? <img src={message.author.avatarUrl} alt={message.author.name} className="w-full h-full object-cover" />
-                : message.author.name[0]?.toUpperCase()}
-            </div>
+            {message.author.avatarUrl
+              ? <img src={message.author.avatarUrl} alt={message.author.name} className="w-10 h-10 rounded-full object-cover cursor-pointer shrink-0 ring-1 ring-border/50" />
+              : <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold cursor-pointer shrink-0",
+                  isOwn
+                    ? "bg-primary/15 text-primary ring-2 ring-primary/20"
+                    : "bg-muted text-foreground ring-1 ring-border"
+                )}>
+                  {message.author.name[0]?.toUpperCase()}
+                </div>
+            }
           </UserCard>
         ) : (
           <span className="hidden group-hover:flex items-start justify-end w-full text-[9px] text-muted-foreground/60 pt-1.5 pr-0.5 leading-none">
