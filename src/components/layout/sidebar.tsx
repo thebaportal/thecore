@@ -108,9 +108,9 @@ export function Sidebar({
       ) : (
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground text-xs font-bold">TC</span>
+            <span className="text-primary-foreground text-xs font-bold">{initials}</span>
           </div>
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">The Core</span>
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">{orgName || "The Core"}</span>
         </div>
       )}
     </div>

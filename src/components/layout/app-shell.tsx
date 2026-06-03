@@ -135,7 +135,10 @@ async function getOrgBranding(clerkOrgId: string) {
     where: { clerkOrgId },
     select: { name: true, logoUrl: true },
   });
-  return { orgName: org?.name ?? "", orgLogoUrl: org?.logoUrl ?? null };
+  // Clerk auto-generates a colored square for every org — ignore those.
+  // Only use logoUrl when it comes from our own storage (non-Clerk CDN).
+  const logoUrl = org?.logoUrl && !org.logoUrl.includes("clerk") ? org.logoUrl : null;
+  return { orgName: org?.name ?? "", orgLogoUrl: logoUrl };
 }
 
 export async function AppShell({

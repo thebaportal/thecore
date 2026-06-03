@@ -58,7 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         clerkOrgId: orgId,
         name: clerkOrg.name,
         slug: clerkOrg.slug ?? orgId,
-        logoUrl: clerkOrg.imageUrl ?? null,
+        logoUrl: null,
       },
       select: { id: true },
     });
