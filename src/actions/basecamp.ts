@@ -1645,8 +1645,14 @@ export async function importBasecampPeople(): Promise<PeopleImportResult> {
 
     const bcTitle = bcp.title?.trim() || null;
 
-    // Already fully linked — still backfill jobTitle if it was never set
+    // Already fully linked — backfill jobTitle and avatarUrl if not yet set
     if (existingCoreUserId) {
+      if (bcp.avatar_url) {
+        await db.user.updateMany({
+          where: { id: existingCoreUserId, avatarUrl: null },
+          data: { avatarUrl: bcp.avatar_url },
+        });
+      }
       if (bcTitle) {
         await db.user.updateMany({
           where: { id: existingCoreUserId, jobTitle: null },
@@ -1662,7 +1668,7 @@ export async function importBasecampPeople(): Promise<PeopleImportResult> {
     const matchedUserId = email ? emailToUserId.get(email.toLowerCase()) : undefined;
 
     if (matchedUserId) {
-      // Link the existing user and backfill jobTitle if not set
+      // Link the existing user and backfill jobTitle and avatarUrl if not set
       await db.basecampPerson.upsert({
         where: { organizationId_basecampPersonId: { organizationId: org.id, basecampPersonId: personId } },
         create: {
@@ -1675,6 +1681,12 @@ export async function importBasecampPeople(): Promise<PeopleImportResult> {
         },
         update: { coreUserId: matchedUserId, basecampName: bcp.name, basecampEmail: email },
       });
+      if (bcp.avatar_url) {
+        await db.user.updateMany({
+          where: { id: matchedUserId, avatarUrl: null },
+          data: { avatarUrl: bcp.avatar_url },
+        });
+      }
       if (bcTitle) {
         await db.user.updateMany({
           where: { id: matchedUserId, jobTitle: null },
