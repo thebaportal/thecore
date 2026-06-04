@@ -20,7 +20,7 @@ async function requireAdmin() {
   return { user, org };
 }
 
-function isRepositorySuspect(name: string, taskCount: number): boolean {
+function isRepositorySuspect(name: string): boolean {
   const n = name.trim();
   if (/\bproject$/i.test(n)) return false;
   if (
@@ -28,7 +28,6 @@ function isRepositorySuspect(name: string, taskCount: number): boolean {
     /\(docs?\s*(only)?\)/i.test(n) ||
     /\bhq\b/i.test(n)
   ) return true;
-  if (taskCount === 0) return true;
   return false;
 }
 
@@ -72,7 +71,7 @@ export async function getProjectsForReclassification(): Promise<ProjectForReclas
     docCount: p._count.docs,
     fileCount: p._count.files,
     memberCount: p._count.members,
-    suspect: isRepositorySuspect(p.name, p._count.tasks),
+    suspect: isRepositorySuspect(p.name),
   }));
 }
 
