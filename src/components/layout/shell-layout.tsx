@@ -16,6 +16,7 @@ export function ShellLayout({
   orgLogoUrl = null,
   orgName = "",
   orgBrandColor = null,
+  orgSecondaryColor = null,
 }: {
   children: React.ReactNode;
   unreadPings: number;
@@ -26,14 +27,17 @@ export function ShellLayout({
   orgLogoUrl?: string | null;
   orgName?: string;
   orgBrandColor?: string | null;
+  orgSecondaryColor?: string | null;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const brandHsl = orgBrandColor ? hexToHslValues(orgBrandColor) : null;
+  const secondaryHsl = orgSecondaryColor ? hexToHslValues(orgSecondaryColor) : null;
   const brandStyle = brandHsl
     ? ({
         "--primary": brandHsl,
         "--primary-foreground": getForegroundHsl(orgBrandColor!),
+        ...(secondaryHsl ? { "--brand-secondary": secondaryHsl } : {}),
       } as React.CSSProperties)
     : undefined;
 

@@ -47,7 +47,7 @@ export default async function TemplatesPage({
       importProjects={importProjects}
       note={note}
       onSaveNote={updateTemplatesNote}
-      orgBranding={branding ? { logoUrl: branding.logoUrl, orgName: branding.name } : null}
+      orgBranding={branding ? { logoUrl: branding.logoUrl, orgName: branding.displayName ?? branding.name } : null}
     />
   );
 }

@@ -47,7 +47,7 @@ export default async function LibraryPage({
       importProjects={importProjects}
       note={note}
       onSaveNote={updateLibraryNote}
-      orgBranding={branding ? { logoUrl: branding.logoUrl, orgName: branding.name } : null}
+      orgBranding={branding ? { logoUrl: branding.logoUrl, orgName: branding.displayName ?? branding.name } : null}
     />
   );
 }

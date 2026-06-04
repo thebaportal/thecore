@@ -48,6 +48,7 @@ export default async function OrganizationSettingsPage() {
           initialLogoUrl={branding?.logoUrl ?? null}
           initialBrandColor={branding?.brandColor ?? null}
           initialSecondaryColor={branding?.secondaryColor ?? null}
+          initialDisplayName={branding?.displayName ?? null}
           orgName={branding?.name ?? ""}
         />
       </div>

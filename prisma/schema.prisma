@@ -11,6 +11,7 @@ model Organization {
   id                   String           @id @default(cuid())
   clerkOrgId           String           @unique
   name                 String
+  displayName          String?
   slug                 String           @unique
   logoUrl              String?
   brandColor           String?

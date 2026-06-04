@@ -41,11 +41,13 @@ export function OrgBrandingForm({
   initialLogoUrl,
   initialBrandColor,
   initialSecondaryColor,
+  initialDisplayName,
   orgName,
 }: {
   initialLogoUrl: string | null;
   initialBrandColor: string | null;
   initialSecondaryColor: string | null;
+  initialDisplayName: string | null;
   orgName: string;
 }) {
   const router = useRouter();
@@ -55,6 +57,7 @@ export function OrgBrandingForm({
   const [logoUploading, setLogoUploading] = useState(false);
   const [brandColor, setBrandColor] = useState(initialBrandColor ?? "");
   const [secondaryColor, setSecondaryColor] = useState(initialSecondaryColor ?? "");
+  const [displayName, setDisplayName] = useState(initialDisplayName ?? "");
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +90,7 @@ export function OrgBrandingForm({
         await updateOrgBranding({
           brandColor: brandColor || null,
           secondaryColor: secondaryColor || null,
+          displayName: displayName.trim() || null,
         });
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
@@ -109,6 +113,26 @@ export function OrgBrandingForm({
 
   return (
     <div className="space-y-6">
+      {/* Display name */}
+      <div className="space-y-2">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Workspace display name
+          </label>
+          <p className="text-xs text-muted-foreground/60 mt-0.5">
+            Shown in the sidebar and workspace screens. Leave blank to use your organization name.
+          </p>
+        </div>
+        <input
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={orgName}
+          maxLength={60}
+          className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
+        />
+      </div>
+
       {/* Logo */}
       <div className="space-y-3">
         <div>

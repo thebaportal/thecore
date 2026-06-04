@@ -26,6 +26,7 @@ export async function updateOrgBranding(data: {
   brandColor?: string | null;
   secondaryColor?: string | null;
   logoUrl?: string | null;
+  displayName?: string | null;
 }) {
   const { org } = await requireAdminOrg();
   await db.organization.update({
@@ -34,6 +35,7 @@ export async function updateOrgBranding(data: {
       ...(data.brandColor !== undefined && { brandColor: data.brandColor || null }),
       ...(data.secondaryColor !== undefined && { secondaryColor: data.secondaryColor || null }),
       ...(data.logoUrl !== undefined && { logoUrl: data.logoUrl || null }),
+      ...(data.displayName !== undefined && { displayName: data.displayName?.trim() || null }),
     },
   });
   revalidatePath("/settings/organization");
@@ -45,6 +47,6 @@ export async function getOrgBrandingSettings() {
   if (!orgId) return null;
   return db.organization.findUnique({
     where: { clerkOrgId: orgId },
-    select: { logoUrl: true, brandColor: true, secondaryColor: true, name: true },
+    select: { logoUrl: true, brandColor: true, secondaryColor: true, name: true, displayName: true },
   });
 }
