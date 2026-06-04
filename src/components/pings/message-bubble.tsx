@@ -50,16 +50,22 @@ function AttachmentList({ attachments }: { attachments: Attachment[] }) {
   );
 }
 
-function renderMention(name: string, userId: string, key: number): React.ReactNode {
+function renderMention(name: string, userId: string, avatarUrl: string | null, key: number): React.ReactNode {
   const chip = (
-    <span className="inline-flex items-center text-primary font-semibold cursor-pointer bg-primary/8 hover:bg-primary/15 rounded px-1 py-0.5 transition-colors text-[0.9em] leading-none">
+    <span className="inline-flex items-center gap-1 text-primary font-semibold cursor-pointer bg-primary/8 hover:bg-primary/15 rounded-full px-1.5 py-0.5 transition-colors text-[0.9em] leading-none">
+      {avatarUrl
+        ? <img src={avatarUrl} alt={name} className="w-4 h-4 rounded-full object-cover shrink-0" />
+        : <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold shrink-0 select-none">{name[0]?.toUpperCase()}</span>
+      }
       @{name}
     </span>
   );
   return <UserCard key={key} userId={userId} side="top" align="center">{chip}</UserCard>;
 }
 
-function renderInline(text: string, membersByName?: Record<string, string>): React.ReactNode[] {
+type MemberMap = Record<string, { id: string; avatarUrl: string | null }>;
+
+function renderInline(text: string, membersByName?: MemberMap): React.ReactNode[] {
   // Split on bold/italic, structured mention tokens @[Name](userId), and legacy @mentions
   const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|@\[[^\]]+\]\([^)]+\)|@\S+(?:\s+\S+){0,3})/g);
   const nodes: React.ReactNode[] = [];
@@ -71,7 +77,8 @@ function renderInline(text: string, membersByName?: Record<string, string>): Rea
     if (part.startsWith("@[")) {
       const m = /^@\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
       if (m) {
-        nodes.push(renderMention(m[1]!, m[2]!, i));
+        const member = membersByName?.[m[1]!];
+        nodes.push(renderMention(m[1]!, m[2]!, member?.avatarUrl ?? null, i));
         continue;
       }
     }
@@ -80,9 +87,9 @@ function renderInline(text: string, membersByName?: Record<string, string>): Rea
       const inner = part.slice(2, -2);
       if (inner.startsWith("@") && membersByName) {
         const name = inner.slice(1);
-        const userId = membersByName[name];
-        if (userId) {
-          nodes.push(renderMention(name, userId, i));
+        const member = membersByName[name];
+        if (member) {
+          nodes.push(renderMention(name, member.id, member.avatarUrl, i));
         } else {
           nodes.push(<strong key={i}>{inner}</strong>);
         }
@@ -106,9 +113,10 @@ function renderInline(text: string, membersByName?: Record<string, string>): Rea
       let matched = false;
       for (let len = words.length; len >= 1; len--) {
         const candidate = words.slice(0, len).join(" ");
-        if (membersByName[candidate]) {
+        const member = membersByName[candidate];
+        if (member) {
           const remainder = words.slice(len).join(" ");
-          nodes.push(renderMention(candidate, membersByName[candidate]!, i));
+          nodes.push(renderMention(candidate, member.id, member.avatarUrl, i));
           if (remainder) nodes.push(` ${remainder}`);
           matched = true;
           break;
@@ -124,7 +132,7 @@ function renderInline(text: string, membersByName?: Record<string, string>): Rea
   return nodes;
 }
 
-function MarkdownBody({ text, className, membersByName }: { text: string; className?: string; membersByName?: Record<string, string> }) {
+function MarkdownBody({ text, className, membersByName }: { text: string; className?: string; membersByName?: MemberMap }) {
   const lines = text.split("\n");
   const nodes: React.ReactNode[] = [];
   let i = 0;
@@ -150,7 +158,7 @@ function MarkdownBody({ text, className, membersByName }: { text: string; classN
   return <div className={className}>{nodes}</div>;
 }
 
-function MessageBody({ body, attachments, isOwn, membersByName }: { body: string; attachments: Attachment[]; isOwn: boolean; membersByName?: Record<string, string> }) {
+function MessageBody({ body, attachments, isOwn, membersByName }: { body: string; attachments: Attachment[]; isOwn: boolean; membersByName?: MemberMap }) {
   const isLong = body.length > 500;
   const [expanded, setExpanded] = useState(false);
 
@@ -260,7 +268,7 @@ export function MessageBubble({
   message: ChatMessageData;
   prevMessage?: ChatMessageData;
   currentUserId: string;
-  membersByName?: Record<string, string>;
+  membersByName?: MemberMap;
   onReply?: (id: string) => void;
 }) {
   const router = useRouter();

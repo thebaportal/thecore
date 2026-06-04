@@ -316,8 +316,8 @@ export function PingThread({
   }, [participants, members]);
 
   const membersByName = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const p of headerPeople) map[p.name] = p.id;
+    const map: Record<string, { id: string; avatarUrl: string | null }> = {};
+    for (const p of headerPeople) map[p.name] = { id: p.id, avatarUrl: p.avatarUrl };
     return map;
   }, [headerPeople]);
 
