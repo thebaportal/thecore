@@ -40,10 +40,10 @@ function NavItem({
       onClick={onClick}
       title={collapsed ? label : undefined}
       className={cn(
-        "flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors relative",
+        "flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm transition-colors relative",
         active
-          ? "bg-accent text-primary"
-          : "text-sidebar-foreground hover:bg-muted/60 hover:text-foreground",
+          ? "bg-primary/8 text-primary font-medium before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-primary/70"
+          : "font-normal text-sidebar-foreground/80 hover:bg-muted/50 hover:text-foreground",
         collapsed && "justify-center w-10 h-10 mx-auto px-0"
       )}
     >
@@ -88,25 +88,30 @@ export function Sidebar({
   const Logo = (
     <div className={cn(
       "flex items-center h-14 px-4 border-b border-sidebar-border shrink-0",
-      collapsed && "justify-center px-0"
+      collapsed ? "justify-center px-0" : "gap-2.5"
     )}>
       {collapsed ? (
+        /* Collapsed: brand-colored initials only */
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
           <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
       ) : orgLogoUrl ? (
+        /* Expanded + logo uploaded */
         <img
           src={orgLogoUrl}
           alt={orgName}
-          className="h-8 w-auto max-w-[148px] object-contain"
+          className="h-8 w-auto max-w-[140px] object-contain"
         />
       ) : (
-        <div className="flex items-center gap-2.5">
+        /* Expanded, no logo: colored initials + org name */
+        <>
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <span className="text-primary-foreground text-xs font-bold">{initials}</span>
           </div>
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">{orgName || "The Core"}</span>
-        </div>
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">
+            {orgName || "The Core"}
+          </span>
+        </>
       )}
     </div>
   );

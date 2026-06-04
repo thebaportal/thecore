@@ -37,6 +37,9 @@ export function ShellLayout({
     ? ({
         "--primary": brandHsl,
         "--primary-foreground": getForegroundHsl(orgBrandColor!),
+        "--ring": brandHsl,           // focus rings adopt the brand color
+        "--sidebar-primary": brandHsl,
+        "--sidebar-primary-foreground": getForegroundHsl(orgBrandColor!),
         ...(secondaryHsl ? { "--brand-secondary": secondaryHsl } : {}),
       } as React.CSSProperties)
     : undefined;
