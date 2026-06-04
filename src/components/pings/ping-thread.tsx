@@ -318,6 +318,21 @@ export function PingThread({
   const membersByName = useMemo(() => {
     const map: Record<string, { id: string; avatarUrl: string | null }> = {};
     for (const p of headerPeople) map[p.name] = { id: p.id, avatarUrl: p.avatarUrl };
+
+    // Basecamp stores first-name-only mentions (e.g. "Jacqueline" not "Jacqueline XYZ").
+    // Add first-name aliases for members whose first name is unambiguous in this conversation.
+    const firstNameCount: Record<string, number> = {};
+    for (const p of headerPeople) {
+      const first = p.name.split(" ")[0]!;
+      firstNameCount[first] = (firstNameCount[first] ?? 0) + 1;
+    }
+    for (const p of headerPeople) {
+      const first = p.name.split(" ")[0]!;
+      if (firstNameCount[first] === 1 && !map[first]) {
+        map[first] = { id: p.id, avatarUrl: p.avatarUrl };
+      }
+    }
+
     return map;
   }, [headerPeople]);
 
