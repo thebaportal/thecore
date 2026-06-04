@@ -680,6 +680,31 @@ async function importProjectPeopleFromBC(
   return { added, errors };
 }
 
+/**
+ * Classify a Basecamp project as a real project, a library repository, or a
+ * template repository.  Basecamp uses "projects" for everything because it has
+ * no dedicated library or templates module.  The Core does, so we route
+ * repository-style projects to Library / Templates instead of creating Project
+ * records with member associations.
+ *
+ * Rules (applied in order):
+ *  1. Name ends with "Project" (case-insensitive) → definite project.
+ *  2. Name contains template keywords → template.
+ *  3. Name contains library/repository keywords → library.
+ *  4. Default → project (err on the side of treating as a real project).
+ */
+function classifyBasecampProject(name: string): "project" | "library" | "template" {
+  const n = name.trim();
+  if (/\bproject$/i.test(n)) return "project";
+  if (/\b(templates?|playbooks?|frameworks?)\b/i.test(n)) return "template";
+  if (
+    /\b(materials?|learning|resources?|curriculum|knowledge)\b/i.test(n) ||
+    /\(docs?\s*(only)?\)/i.test(n) ||
+    /\bhq\b/i.test(n)
+  ) return "library";
+  return "project";
+}
+
 export async function importBasecampProject(bcProjectId: number): Promise<ImportResult> {
   const { token, accountId } = await getBasecampCredentials();
 
@@ -711,6 +736,7 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
   log("Starting — fetching project metadata");
   let bcProject: BCProject;
   let project: { id: string };
+  let kind: "project" | "library" | "template" = "project";
 
   const emptyLog = (): ProjectImportLog => ({
     tasksCount: 0, messagesCount: 0, filesCount: 0, foldersCount: 0,
@@ -749,6 +775,12 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
     });
     log(`Upserted project in DB: ${project.id}`);
 
+    // Classify before seeding mandate or importing members.
+    // Repository-style projects (doc/learning archives) skip member creation and
+    // have their content moved to Library/Templates at the end of the import.
+    kind = classifyBasecampProject(bcProject.name);
+    log(`Classification: ${kind}`);
+
     // Seed the Project Mandate from the BC description on first import.
     // We only create — never overwrite — so manual edits survive re-imports.
     const mandateExists = await db.projectMandate.findUnique({ where: { projectId: project.id } });
@@ -761,15 +793,20 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
 
     phases.push({ phase: "Project", status: "ok" });
 
-    // Import explicit Basecamp project people — non-fatal if it fails
-    try {
-      const { added: membersAdded, errors: memberErrors } =
-        await importProjectPeopleFromBC(bcProjectId, project.id, token, accountId, org.id, user.id);
-      log(`People: ${membersAdded} members added from Basecamp project people list`);
-      // Soft-warn only — don't block the import
-      for (const me of memberErrors) errors.push(`⚠ People: ${me}`);
-    } catch (e) {
-      log(`People fetch non-fatal error: ${String(e)}`);
+    // Import explicit Basecamp project people — skip for repository projects.
+    // Repository projects have no student membership; their content belongs in
+    // Library / Templates, not attached to a project with members.
+    if (kind === "project") {
+      try {
+        const { added: membersAdded, errors: memberErrors } =
+          await importProjectPeopleFromBC(bcProjectId, project.id, token, accountId, org.id, user.id);
+        log(`People: ${membersAdded} members added from Basecamp project people list`);
+        for (const me of memberErrors) errors.push(`⚠ People: ${me}`);
+      } catch (e) {
+        log(`People fetch non-fatal error: ${String(e)}`);
+      }
+    } else {
+      log(`People: skipped — ${kind} repository, no member associations created`);
     }
   } catch (e) {
     const msg = `Failed to create project in DB: ${String(e)}`;
@@ -1233,6 +1270,34 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
       errors.push(`Docs/Files: ${msg}`);
       phases.push({ phase: "Files & Docs", status: "error", error: msg });
     }
+  }
+
+  // ── Repository conversion ─────────────────────────────────────────────────
+  // Move all content to Library or Templates in-place (no folder ID remapping —
+  // just clear projectId so the Library/Templates queries pick them up).
+  // Archive the project shell so it no longer appears in the Projects list.
+  if (kind !== "project") {
+    const isTemplate = kind === "template";
+    log(`Converting to ${kind} — moving content, archiving project shell`);
+    await Promise.all([
+      db.docFolder.updateMany({
+        where: { projectId: project.id },
+        data: { projectId: null, isTemplate },
+      }),
+      db.doc.updateMany({
+        where: { projectId: project.id },
+        data: { projectId: null, isTemplate },
+      }),
+      db.projectFile.updateMany({
+        where: { projectId: project.id },
+        data: { projectId: null, isTemplate },
+      }),
+    ]);
+    await db.project.update({
+      where: { id: project.id },
+      data: { status: "ARCHIVED" },
+    });
+    log(`Repository conversion complete`);
   }
 
   log(`Import complete — tasks:${tasksImported} messages:${messagesImported} docs:${docsImported} files:${filesStored} errors:${errors.length}`);

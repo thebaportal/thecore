@@ -233,7 +233,6 @@ export async function getProjectMembersAndInvitations(projectId: string): Promis
 export async function removeProjectMember(projectId: string, memberId: string) {
   const { org } = await assertInstructorOnProject(projectId);
 
-  // Prevent removing the last instructor/creator
   const member = await db.projectMember.findUnique({
     where: { id: memberId },
     select: { userId: true },
@@ -241,7 +240,27 @@ export async function removeProjectMember(projectId: string, memberId: string) {
   if (!member) return;
 
   await db.projectMember.delete({ where: { id: memberId } });
+
+  // If the removed user is a MEMBER-role (student) with no remaining project
+  // memberships in this org, remove them from the org entirely.
+  const orgMembership = await db.orgMembership.findUnique({
+    where: { organizationId_userId: { organizationId: org.id, userId: member.userId } },
+    select: { role: true },
+  });
+
+  if (orgMembership?.role === "MEMBER") {
+    const remaining = await db.projectMember.count({
+      where: { userId: member.userId, project: { organizationId: org.id } },
+    });
+    if (remaining === 0) {
+      await db.orgMembership.delete({
+        where: { organizationId_userId: { organizationId: org.id, userId: member.userId } },
+      });
+    }
+  }
+
   revalidatePath(`/projects/${projectId}/members`);
+  revalidatePath("/team");
 }
 
 export async function revokeProjectInvitation(projectId: string, invitationId: string) {

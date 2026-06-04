@@ -176,9 +176,7 @@ function PersonCard({
             />
             <span className="text-xs text-slate-500 truncate">{project.name}</span>
           </div>
-        ) : (
-          <p className="text-xs text-slate-300 mt-1 italic">No project</p>
-        )}
+        ) : null}
       </div>
       {currentDbUserId && person.userId !== currentDbUserId && (
         <MessageButton targetUserId={person.userId} targetName={person.name} />

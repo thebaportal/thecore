@@ -2,15 +2,18 @@ import type { Metadata } from "next";
 import { OrganizationProfile } from "@clerk/nextjs";
 import { getOrgPostCategories } from "@/actions/posts";
 import { getOrgBrandingSettings } from "@/actions/org-branding";
+import { getProjectsForReclassification } from "@/actions/org-settings";
 import { PostCategoriesEditor } from "@/components/settings/post-categories-editor";
 import { OrgBrandingForm } from "@/components/settings/org-branding-form";
+import { ProjectReclassification } from "@/components/settings/project-reclassification";
 
 export const metadata: Metadata = { title: "Organization Settings" };
 
 export default async function OrganizationSettingsPage() {
-  const [categories, branding] = await Promise.all([
+  const [categories, branding, reclassProjects] = await Promise.all([
     getOrgPostCategories(),
     getOrgBrandingSettings(),
+    getProjectsForReclassification(),
   ]);
 
   return (
@@ -51,6 +54,17 @@ export default async function OrganizationSettingsPage() {
           initialDisplayName={branding?.displayName ?? null}
           orgName={branding?.name ?? ""}
         />
+      </div>
+
+      {/* Project classification */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Project classification</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Some Basecamp "projects" are document repositories, not real projects. Move them to Library or Templates so students only appear in their actual assigned projects.
+          </p>
+        </div>
+        <ProjectReclassification projects={reclassProjects} />
       </div>
 
       {/* Post categories */}
