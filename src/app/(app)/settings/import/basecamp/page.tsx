@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { BasecampImporter } from "@/components/settings/basecamp-importer";
+import { BasecampAuditReport } from "@/components/settings/basecamp-audit-report";
+import { getBasecampProjectAudit } from "@/actions/basecamp-audit";
 import { deleteImportedPings } from "@/actions/pings";
 
 export const metadata: Metadata = { title: "Import from Basecamp" };
@@ -46,8 +48,10 @@ export default async function BasecampImportPage() {
     ? `https://launchpad.37signals.com/authorization/new?type=web_server&client_id=${clientId}&redirect_uri=${redirectUri}&state=${orgId}`
     : null;
 
+  const auditRows = token && accountId ? await getBasecampProjectAudit().catch(() => null) : null;
+
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-8 max-w-4xl">
       <div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
           <a href="/settings" className="hover:text-foreground transition-colors">Settings</a>
@@ -71,6 +75,19 @@ export default async function BasecampImportPage() {
           onClearPings={deleteImportedPings}
         />
       </Suspense>
+
+      {auditRows && (
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Project audit &amp; data mapping</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              All projects found in your Basecamp account — active and archived. Review the classification
+              and destination before importing. Download as CSV to plan your cleanup in Basecamp first.
+            </p>
+          </div>
+          <BasecampAuditReport rows={auditRows} />
+        </div>
+      )}
     </div>
   );
 }
