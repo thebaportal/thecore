@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import { OrganizationProfile } from "@clerk/nextjs";
 import { getOrgPostCategories } from "@/actions/posts";
 import { getOrgBrandingSettings } from "@/actions/org-branding";
-import { getProjectsForReclassification } from "@/actions/org-settings";
+import { getProjectsForReclassification, getMultiProjectReport } from "@/actions/org-settings";
 import { PostCategoriesEditor } from "@/components/settings/post-categories-editor";
 import { OrgBrandingForm } from "@/components/settings/org-branding-form";
 import { ProjectReclassification } from "@/components/settings/project-reclassification";
+import { MultiProjectReport } from "@/components/settings/multi-project-report";
 
 export const metadata: Metadata = { title: "Organization Settings" };
 
 export default async function OrganizationSettingsPage() {
-  const [categories, branding, reclassProjects] = await Promise.all([
+  const [categories, branding, reclassProjects, multiProjectUsers] = await Promise.all([
     getOrgPostCategories(),
     getOrgBrandingSettings(),
     getProjectsForReclassification(),
+    getMultiProjectReport(),
   ]);
 
   return (
@@ -54,6 +56,17 @@ export default async function OrganizationSettingsPage() {
           initialDisplayName={branding?.displayName ?? null}
           orgName={branding?.name ?? ""}
         />
+      </div>
+
+      {/* Multi-project membership report */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Project membership report</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Users assigned to more than one project. Repository project memberships are flagged and can be removed in bulk.
+          </p>
+        </div>
+        <MultiProjectReport users={multiProjectUsers} />
       </div>
 
       {/* Project classification */}
