@@ -18,7 +18,7 @@ import {
 } from "@/actions/library";
 import { useUploadThing } from "@/lib/uploadthing";
 import { Button } from "@/components/ui/button";
-import { WorkspaceBanner } from "@/components/shared/workspace-banner";
+import { WorkspaceLabel } from "@/components/shared/workspace-banner";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -522,18 +522,16 @@ export function LibraryView({
         </div>
       )}
 
-      {/* Workspace branding — root level only */}
-      {breadcrumb.length === 0 && orgBranding?.orgName && (
-        <WorkspaceBanner
-          orgLogoUrl={orgBranding.logoUrl}
-          orgName={orgBranding.orgName}
-          className="mb-5"
-        />
-      )}
-
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
+          {breadcrumb.length === 0 && orgBranding?.orgName && (
+            <WorkspaceLabel
+              orgLogoUrl={orgBranding.logoUrl}
+              orgName={orgBranding.orgName}
+              className="mb-2"
+            />
+          )}
           {breadcrumb.length > 0 && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-1">
               <Link href="/library" className="hover:text-foreground transition-colors flex items-center gap-1">

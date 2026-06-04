@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export function WorkspaceBanner({
+export function WorkspaceLabel({
   orgLogoUrl,
   orgName,
   className,
@@ -19,26 +19,24 @@ export function WorkspaceBanner({
     .toUpperCase();
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2.5 px-3 py-2 rounded-xl bg-primary/5 border border-primary/10 w-fit",
-        className
-      )}
-    >
+    <div className={cn("flex items-center gap-1.5", className)}>
+      {/* Thin brand-color accent line */}
+      <div className="w-px h-3.5 rounded-full bg-primary/50 shrink-0" />
       {orgLogoUrl ? (
         <img
           src={orgLogoUrl}
           alt={orgName}
-          className="h-5 w-auto max-w-[100px] object-contain"
+          className="h-4 w-auto max-w-[80px] object-contain opacity-75"
         />
       ) : (
-        <>
-          <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center text-primary-foreground text-[8px] font-bold shrink-0">
-            {initials}
-          </div>
-          <span className="text-xs font-medium text-primary/80">{orgName}</span>
-        </>
+        <div className="w-4 h-4 rounded bg-primary/15 flex items-center justify-center text-primary text-[7px] font-bold shrink-0">
+          {initials}
+        </div>
       )}
+      <span className="text-[11px] font-medium text-muted-foreground/60 truncate">{orgName}</span>
     </div>
   );
 }
+
+/** @deprecated Use WorkspaceLabel */
+export const WorkspaceBanner = WorkspaceLabel;

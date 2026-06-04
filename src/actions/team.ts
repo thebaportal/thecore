@@ -42,9 +42,10 @@ export async function getTeamByProject() {
 
   const roleMap = new Map(org.memberships.map((m) => [m.userId, m.role]));
 
+  const logoUrl = org.logoUrl && !org.logoUrl.includes("clerk") ? org.logoUrl : null;
   return {
-    orgName: org.name,
-    orgLogoUrl: org.logoUrl,
+    orgName: org.displayName ?? org.name,
+    orgLogoUrl: logoUrl,
     currentDbUserId: dbUser?.id ?? null,
     people: org.memberships.map((m) => ({
       id: m.id,

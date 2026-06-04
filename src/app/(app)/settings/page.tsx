@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Download, Building2, User, Bell } from "lucide-react";
+import { getOrgBrandingSettings } from "@/actions/org-branding";
+import { WorkspaceLabel } from "@/components/shared/workspace-banner";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -53,10 +55,17 @@ const SECTIONS = [
   },
 ] as const;
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const branding = await getOrgBrandingSettings();
+  const orgName = branding?.displayName ?? branding?.name ?? "";
+  const logoUrl = branding?.logoUrl && !branding.logoUrl.includes("clerk") ? branding.logoUrl : null;
+
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
+        {orgName && (
+          <WorkspaceLabel orgLogoUrl={logoUrl} orgName={orgName} className="mb-2" />
+        )}
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">Manage your workspace and organization.</p>
       </div>

@@ -98,7 +98,7 @@ export function Sidebar({
         <img
           src={orgLogoUrl}
           alt={orgName}
-          className="h-9 w-auto max-w-[160px] object-contain"
+          className="h-8 w-auto max-w-[148px] object-contain"
         />
       ) : (
         <div className="flex items-center gap-2.5">
