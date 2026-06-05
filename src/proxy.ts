@@ -5,8 +5,10 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
-  "/api/uploadthing(.*)",  // UploadThing does its own auth inside the route handler
-  "/api/digest",           // Cron job — protected by CRON_SECRET header
+  "/api/uploadthing(.*)",      // UploadThing does its own auth inside the route handler
+  "/api/digest",               // Cron job — protected by CRON_SECRET header
+  "/api/basecamp/callback(.*)", // OAuth callback — no session yet
+  "/api/org-branding(.*)",     // Called from org-selection page before active org
 ]);
 
 export default clerkMiddleware(
