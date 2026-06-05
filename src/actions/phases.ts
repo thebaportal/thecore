@@ -186,6 +186,38 @@ export async function updateDeliverable(
   revalidatePath(`/projects/${deliverable.phase.projectId}/phases`);
 }
 
+export async function reorderPhases(projectId: string, orderedIds: string[]) {
+  const { org } = await assertInstructor();
+
+  const project = await db.project.findFirst({
+    where: { id: projectId, organizationId: org.id },
+    select: { id: true },
+  });
+  if (!project) throw new Error("Project not found");
+
+  const phases = await db.projectPhase.findMany({
+    where: { projectId, id: { in: orderedIds }, isLocked: true },
+    select: { id: true, order: true },
+  });
+  if (phases.length !== orderedIds.length) throw new Error("Invalid phase IDs");
+
+  const minOrder = Math.min(...phases.map((p) => p.order));
+
+  // Two-pass update to avoid @@unique([projectId, order]) conflicts:
+  // first shift to a high offset, then assign final consecutive orders.
+  await db.$transaction(async (tx) => {
+    const offset = 100000;
+    for (const [i, id] of orderedIds.entries()) {
+      await tx.projectPhase.update({ where: { id }, data: { order: offset + i } });
+    }
+    for (const [i, id] of orderedIds.entries()) {
+      await tx.projectPhase.update({ where: { id }, data: { order: minOrder + i } });
+    }
+  });
+
+  revalidatePath(`/projects/${projectId}/phases`);
+}
+
 export async function deleteDeliverable(deliverableId: string) {
   const { org } = await assertInstructor();
 

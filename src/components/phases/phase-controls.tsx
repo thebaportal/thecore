@@ -1,11 +1,28 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Unlock, CheckCircle2, RotateCcw, Loader2, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { unlockPhase, completePhase, reopenPhase, createPhase, createDeliverable, updatePhase, updateDeliverable, deleteDeliverable, deletePhase } from "@/actions/phases";
+import { Lock, Unlock, CheckCircle2, RotateCcw, Loader2, ChevronRight, Plus, Trash2, GripVertical } from "lucide-react";
+import { unlockPhase, completePhase, reopenPhase, createPhase, createDeliverable, updatePhase, updateDeliverable, deleteDeliverable, deletePhase, reorderPhases } from "@/actions/phases";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ─── Add Phase Button ─────────────────────────────────────────────────────────
 
@@ -231,6 +248,11 @@ function DeliverableRow({ d, onChanged }: { d: LockedDeliverableItem; onChanged:
 
 // ─── Locked phase row ─────────────────────────────────────────────────────────
 
+type DragHandle = {
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+};
+
 type LockedPhaseRowProps = {
   phase: {
     id: string;
@@ -240,9 +262,10 @@ type LockedPhaseRowProps = {
   };
   isInstructor: boolean;
   isLast: boolean;
+  dragHandle?: DragHandle;
 };
 
-export function LockedPhaseRow({ phase, isInstructor, isLast }: LockedPhaseRowProps) {
+export function LockedPhaseRow({ phase, isInstructor, isLast, dragHandle }: LockedPhaseRowProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -309,7 +332,18 @@ export function LockedPhaseRow({ phase, isInstructor, isLast }: LockedPhaseRowPr
     <div className={cn("transition-colors", !isLast && "border-b border-border/40")}>
       {/* Row */}
       <div className="flex items-center gap-3 px-4 py-3">
-        <Lock className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
+        {dragHandle ? (
+          <button
+            {...dragHandle.attributes}
+            {...dragHandle.listeners}
+            className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors touch-none shrink-0"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <Lock className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
+        )}
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className="text-[10px] font-medium text-muted-foreground/40 shrink-0">Phase {phase.order}</span>
           {editingName ? (
@@ -470,6 +504,85 @@ export function LockedPhaseRow({ phase, isInstructor, isLast }: LockedPhaseRowPr
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Sortable locked phase list ───────────────────────────────────────────────
+
+type SortablePhaseType = {
+  id: string;
+  order: number;
+  name: string;
+  deliverables: LockedDeliverableItem[];
+};
+
+function SortablePhaseItem({ phase, isLast }: { phase: SortablePhaseType; isLast: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: phase.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: "relative",
+        zIndex: isDragging ? 1 : 0,
+      }}
+    >
+      <LockedPhaseRow
+        phase={phase}
+        isInstructor={true}
+        isLast={isLast}
+        dragHandle={{ attributes, listeners }}
+      />
+    </div>
+  );
+}
+
+export function SortableLockedPhaseList({
+  phases: initialPhases,
+  projectId,
+}: {
+  phases: SortablePhaseType[];
+  projectId: string;
+}) {
+  const router = useRouter();
+  const [phases, setPhases] = useState(initialPhases);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => { setPhases(initialPhases); }, [initialPhases]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = phases.findIndex((p) => p.id === active.id);
+    const newIndex = phases.findIndex((p) => p.id === over.id);
+    const reordered = arrayMove(phases, oldIndex, newIndex);
+
+    setPhases(reordered);
+    startTransition(async () => {
+      await reorderPhases(projectId, reordered.map((p) => p.id));
+      router.refresh();
+    });
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={phases.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+          {phases.map((phase, i) => (
+            <SortablePhaseItem key={phase.id} phase={phase} isLast={i === phases.length - 1} />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 

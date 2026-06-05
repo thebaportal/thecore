@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Layers, Lock } from "lucide-react";
 import { getProjectPhasesWithDeliverables } from "@/actions/deliverables";
-import { LockedPhaseRow, AddPhaseButton } from "@/components/phases/phase-controls";
+import { LockedPhaseRow, AddPhaseButton, SortableLockedPhaseList } from "@/components/phases/phase-controls";
 import { PhaseList } from "@/components/phases/phase-list";
 import { cn } from "@/lib/utils";
 
@@ -70,27 +70,21 @@ export default async function ProjectPhasesPage({
           </p>
 
           {isInstructor ? (
-            <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-              {lockedPhases.map((phase, i) => (
-                <LockedPhaseRow
-                  key={phase.id}
-                  phase={{
-                    id: phase.id,
-                    order: phase.order,
-                    name: phase.name,
-                    deliverables: phase.deliverables.map((d) => ({
-                      id: d.id,
-                      title: d.title,
-                      submissionKind: d.submissionKind,
-                      requiresFileUpload: d.requiresFileUpload,
-                      dueDate: d.dueDate,
-                    })),
-                  }}
-                  isInstructor={true}
-                  isLast={i === lockedPhases.length - 1}
-                />
-              ))}
-            </div>
+            <SortableLockedPhaseList
+              projectId={projectId}
+              phases={lockedPhases.map((phase) => ({
+                id: phase.id,
+                order: phase.order,
+                name: phase.name,
+                deliverables: phase.deliverables.map((d) => ({
+                  id: d.id,
+                  title: d.title,
+                  submissionKind: d.submissionKind,
+                  requiresFileUpload: d.requiresFileUpload,
+                  dueDate: d.dueDate,
+                })),
+              }))}
+            />
           ) : (
             /* Students: placeholder rows — title + locked status only */
             <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
