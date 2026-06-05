@@ -161,6 +161,7 @@ model Project {
   posts          ProjectPost[]
   teams          ProjectTeam[]
   tasks          Task[]
+  sessions       ProjectSession[]
 
   @@index([organizationId])
   @@index([organizationId, status])
@@ -569,6 +570,19 @@ model StudentSubmission {
   @@unique([deliverableId, userId])
   @@index([deliverableId])
   @@index([userId])
+}
+
+model ProjectSession {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  datetime  DateTime
+  type      String   @default("class")
+  notes     String?
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 model Notification {
