@@ -1,7 +1,7 @@
 "use client";
 
 import { useOrganizationList, useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -16,9 +16,22 @@ export default function OrganizationSelectionPage() {
   const { user } = useUser();
   const { userMemberships, setActive, isLoaded } = useOrganizationList({ userMemberships: true });
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect_url") ?? "/dashboard";
   const [branding, setBranding] = useState<Record<string, OrgBranding>>({});
+  const [autoSelecting, setAutoSelecting] = useState(false);
 
   const memberships = userMemberships?.data ?? [];
+
+  // Auto-select when there is exactly one org — happens for newly invited students
+  useEffect(() => {
+    if (!isLoaded || memberships.length !== 1 || !setActive || autoSelecting) return;
+    setAutoSelecting(true);
+    setActive({ organization: memberships[0]!.organization.id })
+      .then(() => router.push(redirectUrl))
+      .catch(() => setAutoSelecting(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, memberships.length]);
 
   useEffect(() => {
     if (!isLoaded || memberships.length === 0) return;
@@ -32,7 +45,16 @@ export default function OrganizationSelectionPage() {
 
   async function select(orgId: string) {
     await setActive!({ organization: orgId });
-    router.push("/dashboard");
+    router.push(redirectUrl);
+  }
+
+  // Show spinner while auto-selecting (single org) or loading
+  if (!isLoaded || autoSelecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
@@ -53,11 +75,7 @@ export default function OrganizationSelectionPage() {
           </p>
         </div>
 
-        {!isLoaded ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : memberships.length === 0 ? (
+        {memberships.length === 0 ? (
           <div className="rounded-xl border border-border bg-white px-6 py-10 text-center shadow-sm">
             <p className="text-sm font-medium text-foreground mb-1">No workspace found</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -89,9 +107,7 @@ export default function OrganizationSelectionPage() {
                   key={mem.organization.id}
                   onClick={() => select(mem.organization.id)}
                   className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-border bg-white hover:shadow-md transition-all text-left group"
-                  style={{ "--org-color": brandColor } as React.CSSProperties}
                 >
-                  {/* Logo or branded initials */}
                   {logoUrl ? (
                     <div className="w-12 h-12 rounded-xl border border-border bg-white flex items-center justify-center p-1.5 shrink-0">
                       <img src={logoUrl} alt={displayName} className="max-h-full max-w-full object-contain" />
@@ -104,16 +120,12 @@ export default function OrganizationSelectionPage() {
                       {initials}
                     </div>
                   )}
-
-                  {/* Org info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                     <p className="text-xs text-muted-foreground capitalize mt-0.5">
                       {mem.role.replace("org:", "")}
                     </p>
                   </div>
-
-                  {/* Brand color accent bar + arrow */}
                   <div className="flex items-center gap-2 shrink-0">
                     <div
                       className="w-1 h-8 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"

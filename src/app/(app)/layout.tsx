@@ -1,5 +1,6 @@
 import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { AppShell } from "@/components/layout/app-shell";
 
@@ -12,7 +13,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { userId, orgId, orgRole } = await auth();
 
   if (!userId) redirect("/sign-in");
-  if (!orgId) redirect("/organization-selection");
+  if (!orgId) {
+    // Preserve the intended destination so the student lands on the right project
+    // after selecting (or auto-activating) their org. Critical for invite flow.
+    const headersList = await headers();
+    const pathname = headersList.get("x-invoke-path") ?? headersList.get("x-pathname") ?? "";
+    const dest = pathname && pathname !== "/" ? `?redirect_url=${encodeURIComponent(pathname)}` : "";
+    redirect(`/organization-selection${dest}`);
+  }
 
   const clerkUser = await currentUser();
   if (!clerkUser) redirect("/sign-in");
