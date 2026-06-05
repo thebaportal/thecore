@@ -25,15 +25,21 @@ export type ProjectAuditRow = {
   messagesImported: number;
 };
 
+const LIBRARY_PROJECTS = new Set([
+  "BA Interview Prep Materials",
+  "BA Learning Material",
+  "Globalstride Consulting HQ",
+  "Managers",
+  "Mentoring Tuesday",
+]);
+
+const TEMPLATE_PROJECTS = new Set([
+  "Templates for Project Deliverables",
+]);
+
 function classify(name: string): "Project" | "Library" | "Template" {
-  const n = name.trim();
-  if (/\bproject$/i.test(n)) return "Project";
-  if (/\b(templates?|playbooks?|frameworks?)\b/i.test(n)) return "Template";
-  if (
-    /\b(materials?|learning|resources?|curriculum|knowledge)\b/i.test(n) ||
-    /\(docs?\s*(only)?\)/i.test(n) ||
-    /\bhq\b/i.test(n)
-  ) return "Library";
+  if (LIBRARY_PROJECTS.has(name.trim())) return "Library";
+  if (TEMPLATE_PROJECTS.has(name.trim())) return "Template";
   return "Project";
 }
 

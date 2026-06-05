@@ -20,15 +20,21 @@ async function requireAdmin() {
   return { user, org };
 }
 
+const LIBRARY_PROJECTS = new Set([
+  "BA Interview Prep Materials",
+  "BA Learning Material",
+  "Globalstride Consulting HQ",
+  "Managers",
+  "Mentoring Tuesday",
+]);
+
+const TEMPLATE_PROJECTS = new Set([
+  "Templates for Project Deliverables",
+]);
+
 function isRepositorySuspect(name: string): boolean {
   const n = name.trim();
-  if (/\bproject$/i.test(n)) return false;
-  if (
-    /\b(materials?|learning|resources?|curriculum|knowledge|templates?|playbooks?)\b/i.test(n) ||
-    /\(docs?\s*(only)?\)/i.test(n) ||
-    /\bhq\b/i.test(n)
-  ) return true;
-  return false;
+  return LIBRARY_PROJECTS.has(n) || TEMPLATE_PROJECTS.has(n);
 }
 
 export type ProjectForReclassification = {
