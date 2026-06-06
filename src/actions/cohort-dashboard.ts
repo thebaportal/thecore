@@ -34,9 +34,27 @@ export type DeliverableRow = {
   rows: StudentStatusRow[];
 };
 
+export type ProjectCard = {
+  id: string;
+  name: string;
+  color: string | null;
+  iconEmoji: string | null;
+  totalPhases: number;
+  completedPhases: number;
+  currentPhaseName: string | null;
+  currentPhaseOrder: number | null;
+  studentCount: number;
+  awaitingReview: number;
+  nextDueDate: Date | null;
+};
+
 export type CohortDashboardData = {
   user: { id: string; name: string; avatarUrl: string | null };
   orgName: string;
+  // All active projects — used for the projects grid
+  allProjects: ProjectCard[];
+  totalStudents: number;
+  // Focused project (most active) — used for the detailed sections below the grid
   project: { id: string; name: string; color: string | null; iconEmoji: string | null };
   phases: { id: string; name: string; order: number; status: string; isLocked: boolean; dueDate: Date | null }[];
   currentPhase: { id: string; name: string; order: number; dueDate: Date | null; status: string } | null;
@@ -79,8 +97,9 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
 
   const now = new Date();
 
-  const [project, recentPingsRaw, inboxParticipants] = await Promise.all([
-    db.project.findFirst({
+  const [allProjectsRaw, recentPingsRaw, inboxParticipants] = await Promise.all([
+    // Fetch ALL active projects (was findFirst — that's the bug that hid extra projects)
+    db.project.findMany({
       where: { organizationId: org.id, status: "ACTIVE" },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -169,21 +188,69 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
     }),
   ]);
 
-  if (!project) return null;
+  if (allProjectsRaw.length === 0) return null;
 
-  // Student members only
+  // Focused project: first with an IN_PROGRESS phase, else most recently updated
+  const project = allProjectsRaw.find((p) =>
+    p.phases.some((ph) => ph.status === "IN_PROGRESS")
+  ) ?? allProjectsRaw[0]!;
+
+  // ── Per-project summary cards ───────────────────────────────────────────────
+  const allProjects: ProjectCard[] = allProjectsRaw.map((p) => {
+    const students = p.members.filter((m) => m.user.memberships[0]?.role === "MEMBER");
+    const completedPhases = p.phases.filter((ph) => ph.status === "COMPLETED").length;
+    const currentPhase =
+      p.phases.find((ph) => ph.status === "IN_PROGRESS") ??
+      p.phases.find((ph) => !ph.isLocked && ph.status === "NOT_STARTED") ??
+      null;
+
+    const awaitingReview = currentPhase
+      ? currentPhase.deliverables.reduce((n, d) =>
+          n + d.studentSubmissions.filter((s) =>
+            s.status === "SUBMITTED" || s.status === "UNDER_REVIEW"
+          ).length, 0)
+      : 0;
+
+    const nextDueDate = currentPhase
+      ? currentPhase.deliverables
+          .flatMap((d) => (d.dueDate ? [d.dueDate] : []))
+          .sort((a, b) => a.getTime() - b.getTime())[0] ?? null
+      : null;
+
+    return {
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      iconEmoji: p.iconEmoji,
+      totalPhases: p.phases.length,
+      completedPhases,
+      currentPhaseName: currentPhase?.name ?? null,
+      currentPhaseOrder: currentPhase?.order ?? null,
+      studentCount: students.length,
+      awaitingReview,
+      nextDueDate,
+    };
+  });
+
+  const totalStudents = allProjects.reduce((s, p) => s + p.studentCount, 0);
+
+  // Aggregate upcoming sessions from all projects
+  const upcomingSessions = allProjectsRaw
+    .flatMap((p) => p.sessions)
+    .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+    .slice(0, 5);
+
+  // ── Detailed view for focused project ──────────────────────────────────────
   const studentMembers = project.members
     .filter((m) => m.user.memberships[0]?.role === "MEMBER")
     .map((m) => ({ id: m.user.id, name: m.user.name, avatarUrl: m.user.avatarUrl }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Current phase: first IN_PROGRESS, then first unlocked NOT_STARTED
   const currentPhase =
     project.phases.find((p) => p.status === "IN_PROGRESS") ??
     project.phases.find((p) => !p.isLocked && p.status === "NOT_STARTED") ??
     null;
 
-  // Build per-deliverable tracker with per-student rows
   const deliverableTracker: DeliverableRow[] = currentPhase
     ? currentPhase.deliverables.map((d) => {
         const subByUser = new Map(d.studentSubmissions.map((s) => [s.userId, s]));
@@ -212,7 +279,6 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
       })
     : [];
 
-  // Needs attention
   const awaitingReview = deliverableTracker
     .filter((d) => d.submitted > 0)
     .map((d) => ({ id: d.id, title: d.title, count: d.submitted }));
@@ -225,7 +291,6 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
       )
     : [];
 
-  // Recent submissions (last 7 days)
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const recentSubs = await db.studentSubmission.findMany({
     where: {
@@ -252,6 +317,8 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
   return {
     user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
     orgName: org.name,
+    allProjects,
+    totalStudents,
     project: { id: project.id, name: project.name, color: project.color, iconEmoji: project.iconEmoji },
     phases: project.phases.map((p) => ({
       id: p.id, name: p.name, order: p.order,
@@ -264,7 +331,7 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
     deliverableTracker,
     awaitingReview,
     studentsWithNoSubmissions,
-    upcomingSessions: project.sessions,
+    upcomingSessions,
     recentSubmissions: recentSubs.map((s) => ({
       id: s.id,
       userName: s.user.name,
@@ -283,7 +350,7 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
 
 export async function addProjectSession(projectId: string, data: {
   title: string;
-  datetime: string; // ISO string from client
+  datetime: string;
   type: string;
   notes?: string;
 }) {
