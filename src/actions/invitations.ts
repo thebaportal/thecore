@@ -162,8 +162,17 @@ export async function inviteToProject(
 
       await db.projectInvitation.upsert({
         where: { projectId_email: { projectId, email } },
-        create: { projectId, email, clerkInvitationId: clerkInvitationId ?? null },
-        update: { clerkInvitationId: clerkInvitationId ?? null },
+        create: {
+          projectId, email,
+          clerkInvitationId: clerkInvitationId ?? null,
+          firstName: invitee.firstName.trim() || null,
+          lastName: invitee.lastName.trim() || null,
+        },
+        update: {
+          clerkInvitationId: clerkInvitationId ?? null,
+          firstName: invitee.firstName.trim() || null,
+          lastName: invitee.lastName.trim() || null,
+        },
       });
 
       results.push({ email, status: "invited" });

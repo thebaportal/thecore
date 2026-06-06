@@ -17,17 +17,47 @@ export async function syncCurrentIdentity() {
   const clerkUser = await currentUser();
   if (!clerkUser) throw new Error("Unauthenticated");
 
+  const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+  const clerkName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ");
+
+  // If Clerk has no name yet, look it up from the invitation the admin created.
+  // Then patch Clerk so future syncs pick it up natively.
+  let resolvedName = clerkName;
+  if (!resolvedName && email) {
+    const invite = await db.projectInvitation.findFirst({
+      where: { email: email.toLowerCase() },
+      select: { firstName: true, lastName: true },
+      orderBy: { createdAt: "desc" },
+    });
+    if (invite) {
+      resolvedName = [invite.firstName, invite.lastName].filter(Boolean).join(" ");
+      if (resolvedName) {
+        try {
+          const client = await clerkClient();
+          await client.users.updateUser(userId, {
+            firstName: invite.firstName ?? "",
+            lastName: invite.lastName ?? "",
+          });
+        } catch {
+          // Non-fatal — name is still saved in our DB
+        }
+      }
+    }
+  }
+  resolvedName = resolvedName || "Unknown";
+
   const user = await db.user.upsert({
     where: { clerkUserId: userId },
     create: {
       clerkUserId: userId,
-      email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
-      name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || "Unknown",
+      email,
+      name: resolvedName,
       avatarUrl: clerkUser.imageUrl ?? null,
     },
     update: {
-      email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
-      name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || "Unknown",
+      email,
+      // Never overwrite a real name with "Unknown"
+      name: resolvedName !== "Unknown" ? resolvedName : undefined,
       avatarUrl: clerkUser.imageUrl ?? null,
     },
   });
@@ -68,7 +98,7 @@ export async function syncCurrentIdentity() {
     // Fulfil any pending project invitations — webhook fallback for dev/ngrok gaps
     const email = user.email.toLowerCase();
     const pendingInvitations = await db.projectInvitation.findMany({
-      where: { email, project: { organizationId: org.id } },
+      where: { email: email.toLowerCase(), project: { organizationId: org.id } },
       select: { id: true, projectId: true },
     });
     if (pendingInvitations.length > 0) {
