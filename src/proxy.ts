@@ -4,6 +4,7 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/accept-invite(.*)",        // Invitation landing page — handles its own auth state
   "/api/webhooks(.*)",
   "/api/uploadthing(.*)",      // UploadThing does its own auth inside the route handler
   "/api/digest",               // Cron job — protected by CRON_SECRET header

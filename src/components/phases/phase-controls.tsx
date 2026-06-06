@@ -248,11 +248,6 @@ function DeliverableRow({ d, onChanged }: { d: LockedDeliverableItem; onChanged:
 
 // ─── Locked phase row ─────────────────────────────────────────────────────────
 
-type DragHandle = {
-  attributes: ReturnType<typeof useSortable>["attributes"];
-  listeners: ReturnType<typeof useSortable>["listeners"];
-};
-
 type LockedPhaseRowProps = {
   phase: {
     id: string;
@@ -262,10 +257,10 @@ type LockedPhaseRowProps = {
   };
   isInstructor: boolean;
   isLast: boolean;
-  dragHandle?: DragHandle;
+  showDragHint?: boolean;
 };
 
-export function LockedPhaseRow({ phase, isInstructor, isLast, dragHandle }: LockedPhaseRowProps) {
+export function LockedPhaseRow({ phase, isInstructor, isLast, showDragHint }: LockedPhaseRowProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -329,18 +324,16 @@ export function LockedPhaseRow({ phase, isInstructor, isLast, dragHandle }: Lock
   }
 
   return (
-    <div className={cn("transition-colors", !isLast && "border-b border-border/40")}>
+    <div className={cn("transition-colors", !isLast && "border-b border-border/40", showDragHint && "group-hover/sortable:bg-muted/40")}>
       {/* Row */}
       <div className="flex items-center gap-3 px-4 py-3">
-        {dragHandle ? (
-          <button
-            {...dragHandle.attributes}
-            {...dragHandle.listeners}
-            className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors touch-none shrink-0"
-            aria-label="Drag to reorder"
+        {showDragHint ? (
+          <span
+            title="Drag to reorder"
+            className="text-muted-foreground/40 group-hover/sortable:text-muted-foreground/80 transition-colors shrink-0 pointer-events-none"
           >
-            <GripVertical className="w-3.5 h-3.5" />
-          </button>
+            <GripVertical className="w-4 h-4" />
+          </span>
         ) : (
           <Lock className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
         )}
@@ -522,6 +515,8 @@ function SortablePhaseItem({ phase, isLast }: { phase: SortablePhaseType; isLast
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -529,12 +524,13 @@ function SortablePhaseItem({ phase, isLast }: { phase: SortablePhaseType; isLast
         position: "relative",
         zIndex: isDragging ? 1 : 0,
       }}
+      className="cursor-grab active:cursor-grabbing group/sortable outline-none"
     >
       <LockedPhaseRow
         phase={phase}
         isInstructor={true}
         isLast={isLast}
-        dragHandle={{ attributes, listeners }}
+        showDragHint={true}
       />
     </div>
   );
@@ -554,7 +550,7 @@ export function SortableLockedPhaseList({
   useEffect(() => { setPhases(initialPhases); }, [initialPhases]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 

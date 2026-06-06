@@ -146,7 +146,10 @@ export async function inviteToProject(
           organizationId: org.clerkOrgId,
           emailAddress: email,
           role,
-          redirectUrl: `${appUrl}/accept-invite/${projectId}`,
+          // Land new users on the sign-up page WITH the __clerk_ticket so Clerk
+          // processes the invitation there (skipping the "Create Organization" wizard).
+          // After sign-up, Clerk redirects to redirect_url → /accept-invite/[projectId].
+          redirectUrl: `${appUrl}/sign-up?redirect_url=${encodeURIComponent(`/accept-invite/${projectId}`)}`,
           publicMetadata: {
             firstName: invitee.firstName.trim(),
             lastName: invitee.lastName.trim(),
