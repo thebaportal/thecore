@@ -8,7 +8,7 @@ import {
   Activity, Users2, Settings, ChevronLeft, ChevronRight,
   BookOpen, LayoutTemplate, MessageCircle, HelpCircle, Megaphone,
 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,7 @@ export function Sidebar({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const isStudent = role === "MEMBER";
+  const { user } = useUser();
 
   const initials = orgName
     ? orgName.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
@@ -167,17 +168,29 @@ export function Sidebar({
 
       {/* Bottom */}
       <div className={cn(
-        "px-2 py-3 border-t border-sidebar-border space-y-2 shrink-0",
-        collapsed && "flex flex-col items-center space-y-2"
+        "px-2 py-3 border-t border-sidebar-border shrink-0",
+        collapsed ? "flex flex-col items-center space-y-2" : "space-y-2"
       )}>
         {!isStudent && !collapsed && (
           <div className="px-1">
             <OrgSwitcher orgLogoUrl={orgLogoUrl} orgName={orgName} />
           </div>
         )}
-        <div className={cn("flex items-center", collapsed ? "justify-center" : "px-1")}>
-          <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
-        </div>
+        {isStudent && !collapsed ? (
+          <div className="px-1 flex items-center gap-2.5">
+            <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">
+                {user?.fullName ?? user?.firstName ?? "Student"}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50">Student</p>
+            </div>
+          </div>
+        ) : (
+          <div className={cn("flex items-center", collapsed ? "justify-center" : "px-1")}>
+            <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
+          </div>
+        )}
       </div>
 
       <button

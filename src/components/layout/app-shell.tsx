@@ -135,9 +135,7 @@ async function getOrgBranding(clerkOrgId: string) {
     where: { clerkOrgId },
     select: { name: true, displayName: true, logoUrl: true, brandColor: true, secondaryColor: true },
   });
-  // Clerk auto-generates a colored square for every org — ignore those.
-  // Only use logoUrl when it comes from our own storage (non-Clerk CDN).
-  const logoUrl = org?.logoUrl && !org.logoUrl.includes("clerk") ? org.logoUrl : null;
+  const logoUrl = org?.logoUrl ?? null;
   return {
     orgName: org?.displayName ?? org?.name ?? "",
     orgLogoUrl: logoUrl,

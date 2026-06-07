@@ -5,7 +5,7 @@ import {
   ArrowRight, RotateCcw, Check, Clock,
   MessageSquare, AlertCircle, Upload, CalendarDays,
   Users, Settings2, Layers, Plus, FileText,
-  CheckCircle2, BookOpen,
+  CheckCircle2, BookOpen, Megaphone,
 } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
@@ -57,8 +57,7 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   const { project, projectId, totalPhases, completedPhases, currentPhase, myDeliverables } = data;
   const pct = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
   const nextSession = data.upcomingSessions[0] ?? null;
-
-  const brandColor = project.color ?? "#1E3A8A";
+  const brandColor = project.color ?? data.org.brandColor ?? "#1E3A8A";
   const orgName = data.org.displayName ?? data.org.name;
   const watermark = orgName[0]?.toUpperCase() ?? "";
 
@@ -72,85 +71,93 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   return (
     <div className="space-y-5 pb-16">
 
-      {/* Hero card — warm amber greeting + navy project */}
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
       <div className="rounded-2xl overflow-hidden shadow-md">
 
         {/* Warm amber greeting strip */}
-        <div className="bg-amber-100 px-4 sm:px-6 py-3.5">
+        <div className="bg-amber-100 px-5 sm:px-7 py-3">
           <p className="text-amber-900 text-sm font-semibold">{greeting(data.user.name)}</p>
-          <p className="text-amber-700/70 text-xs mt-0.5">{orgName}</p>
+          <p className="text-amber-800/60 text-xs mt-0.5">{orgName}</p>
         </div>
 
         {/* Navy project body */}
-        <div className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)" }}>
-          {/* Watermark letter */}
-          <div className="absolute right-0 inset-y-0 flex items-center pr-4 pointer-events-none select-none" aria-hidden>
-            <span className="text-[140px] font-black leading-none" style={{ color: "rgba(255,255,255,0.05)" }}>{watermark}</span>
-          </div>
+        <div
+          className="relative overflow-hidden px-5 sm:px-7 pt-5 pb-5"
+          style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)" }}
+        >
+          {/* Watermark */}
+          <span
+            className="absolute right-3 bottom-0 text-[130px] font-black leading-none select-none pointer-events-none"
+            style={{ color: "rgba(255,255,255,0.05)" }}
+            aria-hidden
+          >
+            {watermark}
+          </span>
 
-          <div className="px-4 sm:px-6 pt-5 pb-2 relative">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">
-                  {project.name}
-                </h1>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
-                    {project.status}
+          {/* Project info + CTA */}
+          <div className="flex items-start justify-between gap-3 relative">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
+                {project.name}
+              </h1>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
+                  {project.status}
+                </span>
+                {project.targetDate && (
+                  <span className="text-white/50 text-xs">
+                    Due {format(new Date(project.targetDate), "MMM d, yyyy")}
                   </span>
-                  {project.targetDate && (
-                    <span className="text-white/50 text-xs">
-                      Due {format(new Date(project.targetDate), "MMM d, yyyy")}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
-              <Link
-                href={`/projects/${projectId}`}
-                className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors"
-              >
-                My Project <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              <p className="text-white/40 text-xs mt-2">
+                {currentPhase?.name ?? "No active phase yet"}
+              </p>
             </div>
+            <Link
+              href={`/projects/${projectId}`}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors"
+            >
+              My Project <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           {/* Phase progress */}
-          <div className="px-4 sm:px-6 pb-5 pt-3 relative">
-            <div className="flex items-center justify-between text-xs text-white/60 mb-1.5">
-              <span>{currentPhase?.name ?? (totalPhases > 0 ? "No active phase yet" : "No phases configured")}</span>
-              {totalPhases > 0 && (
-                <span className="tabular-nums font-medium text-white/80">{completedPhases}/{totalPhases} phases</span>
-              )}
-            </div>
-            {totalPhases > 0 && (
-              <div className="h-2 rounded-full bg-white/15 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-amber-400 transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
+          <div className="flex items-center gap-3 mt-4 relative">
+            {totalPhases > 0 ? (
+              <>
+                <div className="flex-1">
+                  <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
+                    <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+                <span className="text-white/60 text-xs tabular-nums shrink-0">
+                  {completedPhases}/{totalPhases} phases
+                </span>
+              </>
+            ) : (
+              <span className="text-white/30 text-xs">No phases configured</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Main two-column grid */}
+      {/* ── Content grid ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
 
-        {/* Left — primary content */}
-        <div className="xl:col-span-3 space-y-5">
-
-          {/* Current phase deliverables */}
-          <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        {/* Left — Current Phase (dominant card) */}
+        <div className="xl:col-span-3">
+          <div className="rounded-2xl border border-border bg-card overflow-hidden h-full">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-              <div>
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-muted-foreground" />
                 <h2 className="text-sm font-semibold text-foreground">
                   {currentPhase ? currentPhase.name : "Current Phase"}
                 </h2>
                 {currentPhase && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Phase {currentPhase.order} of {totalPhases}
-                  </p>
+                  <span className="text-xs text-muted-foreground/60">
+                    · Phase {currentPhase.order} of {totalPhases}
+                  </span>
                 )}
               </div>
               <Link
@@ -160,58 +167,46 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
                 View phases <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-            <div className="px-5 py-1">
-              {!currentPhase ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  No phase has been unlocked yet. Check back after your next session.
-                </p>
-              ) : myDeliverables.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">No deliverables in this phase yet.</p>
-              ) : (
-                myDeliverables.map((d) => (
-                  <DeliverableStatusRow key={d.id} title={d.title} status={d.status} dueDate={d.dueDate} />
-                ))
-              )}
-            </div>
-          </div>
 
-          {/* Latest posts */}
-          {data.latestPosts.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground">Latest Posts</h2>
+            {!currentPhase ? (
+              <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+                <div className="relative mb-6">
+                  <div className="w-16 h-20 rounded-lg border-2 border-border bg-muted/20 flex flex-col justify-start pt-2.5 px-2.5 gap-1.5 mx-auto">
+                    <div className="h-1.5 rounded-full bg-muted-foreground/25 w-full" />
+                    <div className="h-1.5 rounded-full bg-muted-foreground/20 w-3/4" />
+                    <div className="h-1.5 rounded-full bg-muted-foreground/15 w-5/6" />
+                    <div className="h-1.5 rounded-full bg-muted-foreground/10 w-2/3" />
+                    <div className="h-1.5 rounded-full bg-muted-foreground/10 w-4/5" />
+                  </div>
+                  <div className="absolute -bottom-2 -right-1 w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                    <Clock className="w-3 h-3 text-muted-foreground/60" />
+                  </div>
                 </div>
-                <Link
-                  href={`/projects/${projectId}/posts`}
-                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                >
-                  All posts <ArrowRight className="w-3 h-3" />
-                </Link>
+                <p className="text-sm font-semibold text-foreground mb-1.5">
+                  No phase has been unlocked yet.
+                </p>
+                <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">
+                  Check back after your next session.
+                </p>
               </div>
-              <div className="divide-y divide-border/50">
-                {data.latestPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/projects/${projectId}/posts`}
-                    className="block px-5 py-3.5 hover:bg-muted/30 transition-colors"
-                  >
-                    <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {post.authorName.split(" ")[0]} · {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-                    </p>
-                  </Link>
+            ) : myDeliverables.length === 0 ? (
+              <div className="flex items-center justify-center px-6 py-12">
+                <p className="text-sm text-muted-foreground">No deliverables in this phase yet.</p>
+              </div>
+            ) : (
+              <div className="px-5 py-1">
+                {myDeliverables.map((d) => (
+                  <DeliverableStatusRow key={d.id} title={d.title} status={d.status} dueDate={d.dueDate} />
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Right — sidebar */}
-        <div className="xl:col-span-2 space-y-5">
+        {/* Right — info panel */}
+        <div className="xl:col-span-2 space-y-4">
 
-          {/* Next session — amber accent */}
+          {/* Next Session */}
           {nextSession ? (
             <div className="rounded-2xl overflow-hidden border border-amber-200">
               <div className="h-1 bg-amber-400" />
@@ -229,16 +224,19 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-border bg-card px-5 py-4">
-              <div className="flex items-center gap-2 mb-1">
-                <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                <h2 className="text-sm font-semibold text-foreground">Next Session</h2>
+            <div className="rounded-2xl border border-border bg-card px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Next Session</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">No sessions scheduled yet.</p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">No sessions scheduled yet.</p>
+              <Plus className="w-4 h-4 text-muted-foreground/30 shrink-0" />
             </div>
           )}
 
-          {/* Team */}
+          {/* Your Team */}
           {data.teamMembers.length > 0 && (
             <div className="rounded-2xl border border-border bg-card px-5 py-4">
               <div className="flex items-center justify-between mb-3">
@@ -246,16 +244,11 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <h2 className="text-sm font-semibold text-foreground">Your Team</h2>
                 </div>
-                <Link
-                  href={`/projects/${projectId}/members`}
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {data.teamMembers.length} members
-                </Link>
+                <span className="text-xs text-muted-foreground">{data.teamMembers.length} members</span>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2.5">
                 {data.teamMembers.map((m) => (
-                  <div key={m.id} className="flex items-center gap-1.5 text-xs text-foreground">
+                  <div key={m.id} className="flex items-center gap-1.5">
                     {m.avatarUrl ? (
                       <img src={m.avatarUrl} alt={m.name} className="w-7 h-7 rounded-full object-cover ring-2 ring-card" />
                     ) : (
@@ -273,9 +266,9 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             </div>
           )}
 
-          {/* Recent chat */}
+          {/* Project Chat */}
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-muted-foreground" />
                 <h2 className="text-sm font-semibold text-foreground">Project Chat</h2>
@@ -293,7 +286,7 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
               </div>
             ) : (
               <div className="divide-y divide-border/50">
-                {data.chatMessages.map((m) => (
+                {data.chatMessages.slice(0, 3).map((m) => (
                   <Link
                     key={m.id}
                     href={`/projects/${projectId}/messages`}
@@ -326,13 +319,13 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             )}
           </div>
 
-          {/* Quick links */}
+          {/* Quick access tiles */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: "Mandate",   href: `/projects/${projectId}/mandate`,  icon: BookOpen },
-              { label: "Files",     href: `/projects/${projectId}/files`,     icon: Upload },
-              { label: "To-dos",    href: `/projects/${projectId}/tasks`,     icon: Check },
-              { label: "Team",      href: `/projects/${projectId}/members`,   icon: Users },
+              { label: "Mandates",      href: `/projects/${projectId}/mandate`, icon: BookOpen },
+              { label: "Files",         href: `/projects/${projectId}/files`,   icon: Upload },
+              { label: "Announcements", href: `/projects/${projectId}/posts`,   icon: Megaphone },
+              { label: "Resources",     href: `/library`,                       icon: FileText },
             ].map(({ label, href, icon: Icon }) => (
               <Link
                 key={label}
