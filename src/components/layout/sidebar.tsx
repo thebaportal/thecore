@@ -88,28 +88,25 @@ export function Sidebar({
 
   const Logo = (
     <div className={cn(
-      "flex items-center h-14 px-4 border-b border-sidebar-border shrink-0",
-      collapsed ? "justify-center px-0" : "gap-2.5"
+      "flex items-center h-[52px] border-b border-sidebar-border shrink-0",
+      collapsed ? "justify-center px-0" : "px-3"
     )}>
       {collapsed ? (
-        /* Collapsed: brand-colored initials only */
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
           <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
       ) : orgLogoUrl ? (
-        /* Expanded + logo uploaded */
         <img
           src={orgLogoUrl}
           alt={orgName}
-          className="h-8 w-auto max-w-[140px] object-contain"
+          className="h-[44px] w-auto max-w-[190px] object-contain"
         />
       ) : (
-        /* Expanded, no logo: colored initials + org name */
         <>
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <span className="text-primary-foreground text-xs font-bold">{initials}</span>
           </div>
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate ml-2">
             {orgName || "The Core"}
           </span>
         </>

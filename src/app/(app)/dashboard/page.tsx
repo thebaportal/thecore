@@ -74,13 +74,10 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <div className="rounded-2xl overflow-hidden shadow-md">
 
-        {/* Warm amber greeting strip */}
-        <div className="bg-amber-100 px-5 sm:px-7 py-3">
-          <p className="text-amber-900 text-sm font-semibold">{greeting(data.user.name)}</p>
-          <p className="text-amber-800/60 text-xs mt-0.5">{orgName}</p>
-        </div>
+        {/* Thin gold accent border */}
+        <div className="h-[5px]" style={{ backgroundColor: "#FFC400" }} />
 
-        {/* Navy project body */}
+        {/* Navy card — greeting + project info */}
         <div
           className="relative overflow-hidden px-5 sm:px-7 pt-5 pb-5"
           style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)" }}
@@ -94,6 +91,9 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             {watermark}
           </span>
 
+          {/* Greeting */}
+          <p className="text-white/50 text-sm mb-3 relative">{greeting(data.user.name)}</p>
+
           {/* Project info + CTA */}
           <div className="flex items-start justify-between gap-3 relative">
             <div className="flex-1 min-w-0">
@@ -101,7 +101,10 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
                 {project.name}
               </h1>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
+                <span
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
+                  style={{ backgroundColor: "#FFC400", color: "#78350f" }}
+                >
                   {project.status}
                 </span>
                 {project.targetDate && (
@@ -128,7 +131,10 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
               <>
                 <div className="flex-1">
                   <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
-                    <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: "#FFC400" }}
+                    />
                   </div>
                 </div>
                 <span className="text-white/60 text-xs tabular-nums shrink-0">
