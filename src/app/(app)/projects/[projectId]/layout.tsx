@@ -51,11 +51,11 @@ export default async function ProjectLayout({
 
           {/* Back link */}
           <a
-            href="/projects"
+            href={isInstructor ? "/projects" : "/dashboard"}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            All projects
+            {isInstructor ? "All projects" : "Dashboard"}
           </a>
 
           {/* Title row */}
@@ -90,7 +90,7 @@ export default async function ProjectLayout({
               </div>
             </div>
 
-            <ProjectHeaderActions project={{ ...project, pinnedAt: project.pinnedAt ?? null }} />
+            {isInstructor && <ProjectHeaderActions project={{ ...project, pinnedAt: project.pinnedAt ?? null }} />}
           </div>
 
           {/* Tabs */}

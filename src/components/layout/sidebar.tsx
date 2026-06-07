@@ -22,7 +22,7 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 }
 
 function NavItem({
-  href, label, icon: Icon, badge, collapsed, onClick,
+  href, label, icon: Icon, badge, collapsed, onClick, activeWhen,
 }: {
   href: string;
   label: string;
@@ -30,9 +30,12 @@ function NavItem({
   badge?: number;
   collapsed: boolean;
   onClick?: () => void;
+  activeWhen?: (pathname: string) => boolean;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(`${href}/`);
+  const active = activeWhen
+    ? activeWhen(pathname)
+    : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link
@@ -128,8 +131,15 @@ export function Sidebar({
             <NavItem href="/dashboard" label="Home" icon={Home} collapsed={collapsed} onClick={onClose} />
             {studentProjectId ? (
               <>
-                <NavItem href={`/projects/${studentProjectId}`}  label="My Project" icon={FolderKanban} collapsed={collapsed} onClick={onClose} />
-                <NavItem href={`/projects/${studentProjectId}/members`} label="Team"        icon={Users2}       collapsed={collapsed} onClick={onClose} />
+                <NavItem
+                  href={`/projects/${studentProjectId}`}
+                  label="My Project"
+                  icon={FolderKanban}
+                  collapsed={collapsed}
+                  onClick={onClose}
+                  activeWhen={(p) => p.startsWith(`/projects/${studentProjectId}`) && !p.startsWith(`/projects/${studentProjectId}/members`)}
+                />
+                <NavItem href={`/projects/${studentProjectId}/members`} label="Team" icon={Users2} collapsed={collapsed} onClick={onClose} />
               </>
             ) : (
               <NavItem href="/projects" label="Projects" icon={FolderKanban} collapsed={collapsed} onClick={onClose} />
