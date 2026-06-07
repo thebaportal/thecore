@@ -12,6 +12,7 @@ export type MyDeliverable = {
 
 export type StudentDashboardData = {
   user: { id: string; name: string; avatarUrl: string | null };
+  org: { name: string; displayName: string | null; logoUrl: string | null; brandColor: string | null };
   project: {
     id: string;
     name: string;
@@ -36,7 +37,10 @@ export async function getStudentDashboardData(): Promise<StudentDashboardData | 
   if (!userId || !orgId) return null;
 
   const [org, dbUser] = await Promise.all([
-    db.organization.findUnique({ where: { clerkOrgId: orgId }, select: { id: true } }),
+    db.organization.findUnique({
+      where: { clerkOrgId: orgId },
+      select: { id: true, name: true, displayName: true, logoUrl: true, brandColor: true },
+    }),
     db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true, name: true, avatarUrl: true } }),
   ]);
   if (!org || !dbUser) return null;
@@ -128,6 +132,7 @@ export async function getStudentDashboardData(): Promise<StudentDashboardData | 
 
   return {
     user: { id: dbUser.id, name: dbUser.name, avatarUrl: dbUser.avatarUrl },
+    org: { name: org.name, displayName: org.displayName, logoUrl: org.logoUrl, brandColor: org.brandColor },
     project,
     projectId,
     totalPhases: phases.length,
