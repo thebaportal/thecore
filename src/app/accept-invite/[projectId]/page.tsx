@@ -33,5 +33,5 @@ export default async function AcceptInvitePage({
     select: { id: true },
   });
 
-  redirect(project ? `/projects/${projectId}/mandate` : "/dashboard");
+  redirect("/dashboard");
 }
