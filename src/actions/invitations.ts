@@ -275,6 +275,59 @@ export async function removeProjectMember(projectId: string, memberId: string) {
   revalidatePath("/team");
 }
 
+export async function resendProjectInvitation(projectId: string, invitationId: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const { org } = await assertInstructorOnProject(projectId);
+
+  const invitation = await db.projectInvitation.findUnique({
+    where: { id: invitationId, projectId },
+    select: { clerkInvitationId: true, email: true, firstName: true, lastName: true },
+  });
+  if (!invitation) return;
+
+  const client = await clerkClient();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  // Revoke the old Clerk invitation so the user gets a fresh link
+  if (invitation.clerkInvitationId) {
+    try {
+      await client.organizations.revokeOrganizationInvitation({
+        organizationId: org.clerkOrgId,
+        invitationId: invitation.clerkInvitationId,
+        requestingUserId: userId,
+      });
+    } catch {
+      // Already accepted or expired — continue
+    }
+  }
+
+  let newClerkId: string | undefined;
+  try {
+    const inv = await client.organizations.createOrganizationInvitation({
+      organizationId: org.clerkOrgId,
+      emailAddress: invitation.email,
+      role: "org:member",
+      redirectUrl: `${appUrl}/sign-up?redirect_url=${encodeURIComponent(`/accept-invite/${projectId}`)}`,
+      publicMetadata: {
+        firstName: invitation.firstName ?? "",
+        lastName: invitation.lastName ?? "",
+      },
+    });
+    newClerkId = inv.id;
+  } catch {
+    // ignore — DB record stays so syncCurrentIdentity can still fulfil it
+  }
+
+  await db.projectInvitation.update({
+    where: { id: invitationId },
+    data: { clerkInvitationId: newClerkId ?? null },
+  });
+
+  revalidatePath(`/projects/${projectId}/members`);
+}
+
 export async function revokeProjectInvitation(projectId: string, invitationId: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");

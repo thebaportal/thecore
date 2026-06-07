@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { Hash, MessageCircle, Trash2, Loader2 } from "lucide-react";
+import { Hash, MessageCircle, Trash2, Loader2, StickyNote } from "lucide-react";
 import { deletePing } from "@/actions/pings";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ function getPingName(ping: PingItem, currentUserId: string): string {
   }
   if (ping.type === "DIRECT") {
     const other = ping.participants.find((p) => p.user.id !== currentUserId);
-    return other?.user.name ?? "Direct Message";
+    return other?.user.name ?? "My Notes";
   }
   // For GROUP pings, prefer custom title, then participant first names
   if (ping.title) return ping.title;
@@ -118,8 +118,13 @@ export function PingListItem({
         </div>
       )}
     </div>
+  ) : !otherForDM ? (
+    // Self-DM → My Notes
+    <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+      <StickyNote className="w-3.5 h-3.5 text-amber-500" />
+    </div>
   ) : (
-    <Avatar name={otherForDM?.user.name ?? "?"} avatarUrl={otherForDM?.user.avatarUrl} />
+    <Avatar name={otherForDM.user.name} avatarUrl={otherForDM.user.avatarUrl} />
   );
 
   return (

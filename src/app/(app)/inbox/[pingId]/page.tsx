@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { ArrowLeft, Hash } from "lucide-react";
+import { ArrowLeft, Hash, StickyNote } from "lucide-react";
 import { getPingMessages, markPingRead } from "@/actions/pings";
 import { PingThread } from "@/components/pings/ping-thread";
 import { DeleteConversationButton } from "@/components/pings/delete-conversation-button";
@@ -41,12 +41,18 @@ export default async function InboxThreadPage({
   const memberUsers = ping.participants.map((p) => p.user);
   const otherParticipants = ping.participants.filter((p) => p.user.id !== user?.id);
   const otherUser = ping.type === "DIRECT" ? otherParticipants[0]?.user : null;
+  const isSelfNote = ping.type === "DIRECT" && otherParticipants.length === 0;
 
   let headerTitle = ping.title ?? "";
   let headerSub = "";
   if (ping.type === "DIRECT") {
-    headerTitle = otherUser?.name ?? "Direct Message";
-    headerSub = "Direct message";
+    if (isSelfNote) {
+      headerTitle = "My Notes";
+      headerSub = "Private · only visible to you";
+    } else {
+      headerTitle = otherUser?.name ?? "Direct Message";
+      headerSub = "Direct message";
+    }
   } else if (ping.type === "GROUP") {
     const groupNames = otherParticipants
       .slice(0, 3)
@@ -60,7 +66,11 @@ export default async function InboxThreadPage({
   }
 
   const headerAvatar =
-    ping.type === "DIRECT" && otherUser ? (
+    isSelfNote ? (
+      <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+        <StickyNote className="w-4 h-4 text-amber-500" />
+      </div>
+    ) : ping.type === "DIRECT" && otherUser ? (
       <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center shrink-0">
         {otherUser.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, Mail, Clock, Loader2, UserMinus } from "lucide-react";
+import { X, Mail, Clock, Loader2, UserMinus, RefreshCw, FileUp } from "lucide-react";
 import { MessageButton } from "@/components/pings/message-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,14 +16,18 @@ import { ProjectInviteButton } from "@/components/projects/project-invite-button
 import {
   removeProjectMember,
   revokeProjectInvitation,
+  resendProjectInvitation,
   type ProjectMembersData,
 } from "@/actions/invitations";
+import { BulkInviteDialog } from "@/components/projects/bulk-invite-dialog";
 import { cn } from "@/lib/utils";
 
 type ConfirmState =
   | { kind: "remove"; memberId: string; name: string }
   | { kind: "revoke"; invitationId: string; email: string }
   | null;
+
+type ResendState = { id: string } | null;
 
 function Avatar({ name, avatarUrl, size = "lg" }: { name: string; avatarUrl: string | null; size?: "md" | "lg" }) {
   const dim = size === "lg" ? "w-16 h-16 text-xl" : "w-8 h-8 text-sm";
@@ -49,6 +53,17 @@ export function MembersClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [resending, setResending] = useState<ResendState>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  function handleResend(invitationId: string) {
+    setResending({ id: invitationId });
+    startTransition(async () => {
+      await resendProjectInvitation(projectId, invitationId);
+      setResending(null);
+      router.refresh();
+    });
+  }
 
   function handleConfirmAction() {
     if (!confirm) return;
@@ -74,7 +89,18 @@ export function MembersClient({
             {data.invitations.length > 0 && `, ${data.invitations.length} pending`}
           </p>
         </div>
-        {data.isInstructor && <ProjectInviteButton projectId={projectId} />}
+        {data.isInstructor && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBulkOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              <FileUp className="w-3.5 h-3.5" />
+              Import CSV
+            </button>
+            <ProjectInviteButton projectId={projectId} />
+          </div>
+        )}
       </div>
 
       {/* Confirm dialog */}
@@ -174,6 +200,16 @@ export function MembersClient({
                     Pending
                   </span>
                   <button
+                    onClick={() => handleResend(inv.id)}
+                    disabled={isPending && resending?.id === inv.id}
+                    className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Resend invitation"
+                  >
+                    {isPending && resending?.id === inv.id
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <RefreshCw className="h-3.5 w-3.5" />}
+                  </button>
+                  <button
                     onClick={() => setConfirm({ kind: "revoke", invitationId: inv.id, email: inv.email })}
                     className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     title="Revoke invitation"
@@ -186,6 +222,12 @@ export function MembersClient({
           </div>
         </div>
       )}
+
+      <BulkInviteDialog
+        projectId={projectId}
+        open={bulkOpen}
+        onClose={() => { setBulkOpen(false); router.refresh(); }}
+      />
     </div>
   );
 }
