@@ -58,8 +58,6 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   const pct = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
   const nextSession = data.upcomingSessions[0] ?? null;
 
-  const orgName = data.org.displayName ?? data.org.name;
-  const orgLogo = data.org.logoUrl && !data.org.logoUrl.includes("clerk") ? data.org.logoUrl : null;
   const brandColor = project.color ?? "#1E3A8A";
 
   function sessionLabel(dt: Date) {
@@ -72,92 +70,52 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   return (
     <div className="space-y-5 pb-16">
 
-      {/* Grand hero — two-tone: white org identity top, navy project bottom */}
-      <div className="rounded-2xl overflow-hidden shadow-lg border border-border/40">
-
-        {/* ── White org identity section — balanced two-column ── */}
-        <div className="bg-white px-6 sm:px-8 py-5">
-          <div className="flex items-center gap-5 sm:gap-8">
-            {/* Logo — left */}
-            <div className="shrink-0">
-              {orgLogo ? (
-                <img
-                  src={orgLogo}
-                  alt={orgName}
-                  className="h-11 sm:h-14 w-auto max-w-[220px] object-contain"
-                />
-              ) : (
-                <p className="text-xl sm:text-2xl font-extrabold tracking-tight" style={{ color: "#1E3A8A" }}>
-                  {orgName}
-                </p>
-              )}
+      {/* Hero card — navy gradient */}
+      <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: `linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)` }}>
+        {/* Top amber accent line */}
+        <div className="h-1 bg-amber-400" />
+        <div className="px-4 sm:px-6 pt-5 pb-2">
+          <p className="text-white/60 text-sm mb-1">{greeting(data.user.name)}</p>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">
+                {project.name}
+              </h1>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
+                  {project.status}
+                </span>
+                {project.targetDate && (
+                  <span className="text-white/50 text-xs">
+                    Due {format(new Date(project.targetDate), "MMM d, yyyy")}
+                  </span>
+                )}
+              </div>
             </div>
-
-            {/* Vertical divider */}
-            <div className="hidden sm:block w-px self-stretch bg-gray-200 shrink-0" />
-
-            {/* Greeting — right */}
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">
-                Your workspace
-              </p>
-              <p className="text-lg sm:text-xl font-bold text-gray-800 leading-tight truncate">
-                {greeting(data.user.name)}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5 truncate">{orgName}</p>
-            </div>
+            <Link
+              href={`/projects/${projectId}`}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors"
+            >
+              My Project <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
 
-        {/* ── Amber gradient divider ── */}
-        <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500" />
-
-        {/* ── Navy project section ── */}
-        <div style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)" }}>
-          <div className="px-4 sm:px-6 pt-5 pb-2">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">
-                  {project.name}
-                </h1>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
-                    {project.status}
-                  </span>
-                  {project.targetDate && (
-                    <span className="text-white/50 text-xs">
-                      Due {format(new Date(project.targetDate), "MMM d, yyyy")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <Link
-                href={`/projects/${projectId}`}
-                className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors"
-              >
-                My Project <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Phase progress */}
+        {/* Phase progress in the hero */}
+        {totalPhases > 0 && (
           <div className="px-4 sm:px-6 pb-5 pt-3">
             <div className="flex items-center justify-between text-xs text-white/60 mb-1.5">
-              <span>{currentPhase?.name ?? (totalPhases > 0 ? "No active phase yet" : "No phases configured")}</span>
-              {totalPhases > 0 && (
-                <span className="tabular-nums font-medium text-white/80">{completedPhases}/{totalPhases} phases</span>
-              )}
+              <span>{currentPhase?.name ?? "No active phase yet"}</span>
+              <span className="tabular-nums font-medium text-white/80">{completedPhases}/{totalPhases} phases</span>
             </div>
-            {totalPhases > 0 && (
-              <div className="h-2 rounded-full bg-white/15 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-amber-400 transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            )}
+            <div className="h-2 rounded-full bg-white/15 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-amber-400 transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Main two-column grid */}
