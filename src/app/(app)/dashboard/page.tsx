@@ -59,6 +59,8 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   const nextSession = data.upcomingSessions[0] ?? null;
 
   const brandColor = project.color ?? "#1E3A8A";
+  const orgName = data.org.displayName ?? data.org.name;
+  const watermark = orgName[0]?.toUpperCase() ?? "";
 
   function sessionLabel(dt: Date) {
     if (isToday(new Date(dt))) return "Today";
@@ -70,52 +72,66 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   return (
     <div className="space-y-5 pb-16">
 
-      {/* Hero card — navy gradient */}
-      <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: `linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)` }}>
-        {/* Top amber accent line */}
-        <div className="h-1 bg-amber-400" />
-        <div className="px-4 sm:px-6 pt-5 pb-2">
-          <p className="text-white/60 text-sm mb-1">{greeting(data.user.name)}</p>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">
-                {project.name}
-              </h1>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
-                  {project.status}
-                </span>
-                {project.targetDate && (
-                  <span className="text-white/50 text-xs">
-                    Due {format(new Date(project.targetDate), "MMM d, yyyy")}
-                  </span>
-                )}
-              </div>
-            </div>
-            <Link
-              href={`/projects/${projectId}`}
-              className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors"
-            >
-              My Project <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+      {/* Hero card — warm amber greeting + navy project */}
+      <div className="rounded-2xl overflow-hidden shadow-md">
+
+        {/* Warm amber greeting strip */}
+        <div className="bg-amber-100 px-4 sm:px-6 py-3.5">
+          <p className="text-amber-900 text-sm font-semibold">{greeting(data.user.name)}</p>
+          <p className="text-amber-700/70 text-xs mt-0.5">{orgName}</p>
         </div>
 
-        {/* Phase progress in the hero */}
-        {totalPhases > 0 && (
-          <div className="px-4 sm:px-6 pb-5 pt-3">
-            <div className="flex items-center justify-between text-xs text-white/60 mb-1.5">
-              <span>{currentPhase?.name ?? "No active phase yet"}</span>
-              <span className="tabular-nums font-medium text-white/80">{completedPhases}/{totalPhases} phases</span>
-            </div>
-            <div className="h-2 rounded-full bg-white/15 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-amber-400 transition-all"
-                style={{ width: `${pct}%` }}
-              />
+        {/* Navy project body */}
+        <div className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)" }}>
+          {/* Watermark letter */}
+          <div className="absolute right-0 inset-y-0 flex items-center pr-4 pointer-events-none select-none" aria-hidden>
+            <span className="text-[140px] font-black leading-none" style={{ color: "rgba(255,255,255,0.05)" }}>{watermark}</span>
+          </div>
+
+          <div className="px-4 sm:px-6 pt-5 pb-2 relative">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">
+                  {project.name}
+                </h1>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-amber-900 uppercase tracking-wide">
+                    {project.status}
+                  </span>
+                  {project.targetDate && (
+                    <span className="text-white/50 text-xs">
+                      Due {format(new Date(project.targetDate), "MMM d, yyyy")}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Link
+                href={`/projects/${projectId}`}
+                className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors"
+              >
+                My Project <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
-        )}
+
+          {/* Phase progress */}
+          <div className="px-4 sm:px-6 pb-5 pt-3 relative">
+            <div className="flex items-center justify-between text-xs text-white/60 mb-1.5">
+              <span>{currentPhase?.name ?? (totalPhases > 0 ? "No active phase yet" : "No phases configured")}</span>
+              {totalPhases > 0 && (
+                <span className="tabular-nums font-medium text-white/80">{completedPhases}/{totalPhases} phases</span>
+              )}
+            </div>
+            {totalPhases > 0 && (
+              <div className="h-2 rounded-full bg-white/15 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-amber-400 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main two-column grid */}
