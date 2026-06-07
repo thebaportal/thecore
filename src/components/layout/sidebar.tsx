@@ -88,7 +88,7 @@ export function Sidebar({
 
   const Logo = (
     <div className={cn(
-      "flex items-center h-[52px] border-b border-sidebar-border shrink-0",
+      "flex items-center h-[60px] shrink-0",
       collapsed ? "justify-center px-0" : "px-3"
     )}>
       {collapsed ? (
@@ -99,7 +99,7 @@ export function Sidebar({
         <img
           src={orgLogoUrl}
           alt={orgName}
-          className="h-[44px] w-auto max-w-[190px] object-contain"
+          className="h-[50px] w-auto max-w-full object-contain"
         />
       ) : (
         <>
@@ -192,7 +192,7 @@ export function Sidebar({
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-16 z-10 w-6 h-6 rounded-full bg-sidebar border border-sidebar-border shadow-sm flex items-center justify-center hover:bg-muted transition-colors"
+        className="absolute -right-3 top-[100px] z-10 w-6 h-6 rounded-full bg-sidebar border border-sidebar-border shadow-sm flex items-center justify-center hover:bg-muted transition-colors"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {collapsed
