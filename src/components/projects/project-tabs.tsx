@@ -31,7 +31,7 @@ export function ProjectTabs({ projectId, isInstructor }: { projectId: string; is
   const tabs = isInstructor ? ADMIN_TABS : STUDENT_TABS;
 
   return (
-    <nav className="flex gap-0">
+    <nav className="flex gap-0 overflow-x-auto scrollbar-none -mb-px">
       {tabs.map(({ label, suffix }) => {
         const href = `${basePath}${suffix}`;
         const active = pathname.startsWith(href);
@@ -41,7 +41,7 @@ export function ProjectTabs({ projectId, isInstructor }: { projectId: string; is
             key={label}
             href={href}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
+              "px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap",
               active
                 ? "text-primary border-primary"
                 : "text-muted-foreground hover:text-foreground border-transparent hover:border-border"

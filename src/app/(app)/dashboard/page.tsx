@@ -73,9 +73,9 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
       <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: `linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)` }}>
         {/* Top amber accent line */}
         <div className="h-1 bg-amber-400" />
-        <div className="px-6 pt-5 pb-2">
+        <div className="px-4 sm:px-6 pt-5 pb-2">
           <p className="text-white/60 text-sm mb-1">{greeting(data.user.name)}</p>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-white leading-tight tracking-tight">
                 {project.name}
@@ -102,7 +102,7 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
 
         {/* Phase progress in the hero */}
         {totalPhases > 0 && (
-          <div className="px-6 pb-5 pt-3">
+          <div className="px-4 sm:px-6 pb-5 pt-3">
             <div className="flex items-center justify-between text-xs text-white/60 mb-1.5">
               <span>{currentPhase?.name ?? "No active phase yet"}</span>
               <span className="tabular-nums font-medium text-white/80">{completedPhases}/{totalPhases} phases</span>

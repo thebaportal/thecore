@@ -21,9 +21,13 @@ type Mandate = {
   nextSteps?: string | null;
 };
 
+// Strip leading bullet/dash/number prefixes so auto-bullets don't double-render
 function parseList(text: string | null | undefined): string[] {
   if (!text?.trim()) return [];
-  return text.split("\n").map((s) => s.trim()).filter(Boolean);
+  return text
+    .split("\n")
+    .map((s) => s.trim().replace(/^[•\-\*]\s*/, "").replace(/^\d+[\.\)]\s*/, ""))
+    .filter(Boolean);
 }
 
 function fmtDate(d: Date | string | null | undefined) {
@@ -32,6 +36,96 @@ function fmtDate(d: Date | string | null | undefined) {
     month: "short", day: "numeric", year: "numeric",
   });
 }
+
+// Textarea that auto-continues bullet points on Enter
+function BulletTextarea({
+  value, onChange, rows, placeholder, autoFocus,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  rows?: number;
+  placeholder?: string;
+  autoFocus?: boolean;
+}) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const el = e.currentTarget;
+    const pos = el.selectionStart;
+    const val = el.value;
+
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const before = val.slice(0, pos);
+    const after = val.slice(pos);
+    const currentLine = before.split("\n").pop() ?? "";
+
+    // If the current line is just a bullet with no content, remove it and break out
+    if (/^•\s*$/.test(currentLine.trim()) || currentLine.trim() === "") {
+      const stripped = before.replace(/\n?•\s*$/, "");
+      const newVal = stripped + "\n" + after;
+      onChange(newVal);
+      const newPos = stripped.length + 1;
+      requestAnimationFrame(() => el.setSelectionRange(newPos, newPos));
+      return;
+    }
+
+    const insert = "\n• ";
+    onChange(before + insert + after);
+    requestAnimationFrame(() => el.setSelectionRange(pos + insert.length, pos + insert.length));
+  }
+
+  function handleFocus(e: React.FocusEvent<HTMLTextAreaElement>) {
+    if (!e.target.value.trim()) {
+      onChange("• ");
+      requestAnimationFrame(() => e.target.setSelectionRange(2, 2));
+    }
+  }
+
+  return (
+    <Textarea
+      rows={rows}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      onFocus={handleFocus}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      className="text-sm"
+    />
+  );
+}
+
+// ── Consistent list rendering ─────────────────────────────────────────────────
+
+function BulletList({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-2.5">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-3 text-sm text-foreground leading-relaxed">
+          <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function NumberedList({ items }: { items: string[] }) {
+  return (
+    <ol className="space-y-2.5">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-baseline gap-3 text-sm text-foreground leading-relaxed">
+          <span className="text-sm font-semibold text-muted-foreground/25 tabular-nums shrink-0 w-5 text-right">
+            {i + 1}.
+          </span>
+          {item}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function ProjectMandate({
   projectId,
@@ -109,7 +203,6 @@ export function ProjectMandate({
 
   return (
     <>
-
       {!hasContent ? (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground/40 italic">
@@ -124,11 +217,11 @@ export function ProjectMandate({
       ) : (
         <div className="space-y-10">
 
-          {/* ── Top row: main content + period card ─────────────── */}
+          {/* ── Top row: main content + sidebar ── */}
           <div className="flex gap-8 items-start">
 
             {/* Left: Goal + Scope + Deliverables */}
-            <div className="flex-1 min-w-0 space-y-10">
+            <div className="flex-1 min-w-0 space-y-8">
 
               {mandate.projectDescription && (
                 <div>
@@ -141,14 +234,11 @@ export function ProjectMandate({
                         onClick={() => setOpen(true)}
                         className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                       >
-                        <Pencil className="h-3 w-3" />
-                        Edit
+                        <Pencil className="h-3 w-3" /> Edit
                       </button>
                     )}
                   </div>
-                  <p className="text-base text-foreground leading-loose">
-                    {mandate.projectDescription}
-                  </p>
+                  <p className="text-base text-foreground leading-loose">{mandate.projectDescription}</p>
                 </div>
               )}
 
@@ -157,32 +247,16 @@ export function ProjectMandate({
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35 mb-4">
                     Scope
                   </p>
-                  <ul className="space-y-3">
-                    {scopeItems.map((item, i) => (
-                      <li key={i} className="flex items-start gap-4 text-sm text-foreground leading-relaxed">
-                        <span className="mt-[9px] w-1 h-1 rounded-full bg-muted-foreground/25 shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+                  <BulletList items={scopeItems} />
                 </div>
               )}
 
               {deliverableItems.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35 mb-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35 mb-4">
                     Expected Deliverables
                   </p>
-                  <ol className="space-y-4">
-                    {deliverableItems.map((item, i) => (
-                      <li key={i} className="flex items-baseline gap-5">
-                        <span className="text-lg font-bold text-muted-foreground/15 tabular-nums leading-none shrink-0 w-6 text-right">
-                          {i + 1}
-                        </span>
-                        <span className="text-sm text-foreground leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ol>
+                  <NumberedList items={deliverableItems} />
                 </div>
               )}
 
@@ -190,9 +264,8 @@ export function ProjectMandate({
 
             {/* Right: Period + Next Steps */}
             {(hasStats || nextStepItems.length > 0 || isInstructor) && (
-              <div className="w-[300px] shrink-0 space-y-4">
+              <div className="w-[280px] shrink-0 space-y-4">
 
-                {/* Period card */}
                 {hasStats && (
                   <div className="rounded-xl border border-border bg-card p-5 space-y-5">
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35">
@@ -236,7 +309,7 @@ export function ProjectMandate({
                   </div>
                 )}
 
-                {/* Next Steps card */}
+                {/* Next Steps */}
                 {(nextStepItems.length > 0 || isInstructor) && (
                   <div className="rounded-xl border border-border bg-card overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50">
@@ -245,7 +318,7 @@ export function ProjectMandate({
                       </p>
                       {isInstructor && !editingNextSteps && (
                         <button
-                          onClick={() => setEditingNextSteps(true)}
+                          onClick={() => { setNextStepsValue(mandate?.nextSteps ?? ""); setEditingNextSteps(true); }}
                           className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                         >
                           <Pencil className="h-3 w-3" />
@@ -255,15 +328,14 @@ export function ProjectMandate({
                     <div className="px-5 py-4">
                       {editingNextSteps ? (
                         <div className="space-y-3">
-                          <Textarea
+                          <BulletTextarea
                             rows={5}
                             value={nextStepsValue}
-                            onChange={(e) => setNextStepsValue(e.target.value)}
-                            placeholder={"Download Basecamp App\nUpload Profile Picture"}
-                            className="text-sm"
+                            onChange={setNextStepsValue}
+                            placeholder="• Review project mandate&#10;• Join project chat&#10;• Complete first deliverable"
                             autoFocus
                           />
-                          <p className="text-xs text-muted-foreground">One item per line</p>
+                          <p className="text-xs text-muted-foreground">Press Enter to add items automatically</p>
                           <div className="flex gap-2">
                             <Button size="sm" onClick={handleSaveNextSteps} disabled={isSavingNextSteps}>
                               {isSavingNextSteps && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
@@ -278,31 +350,20 @@ export function ProjectMandate({
                           </div>
                         </div>
                       ) : nextStepItems.length > 0 ? (
-                        <ol className="space-y-3">
-                          {nextStepItems.map((item, i) => (
-                            <li key={i} className="flex items-baseline gap-3">
-                              <span className="text-base font-bold text-muted-foreground/15 tabular-nums leading-none shrink-0 w-5 text-right">
-                                {i + 1}
-                              </span>
-                              <span className="text-sm text-foreground leading-relaxed">{item}</span>
-                            </li>
-                          ))}
-                        </ol>
+                        <NumberedList items={nextStepItems} />
                       ) : (
                         <p className="text-xs text-muted-foreground/40 italic">None yet.</p>
                       )}
                     </div>
                   </div>
                 )}
-
               </div>
             )}
           </div>
-
         </div>
       )}
 
-      {/* ── Edit dialog ───────────────────────────────────────────── */}
+      {/* ── Edit dialog ── */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
           <DialogHeader>
@@ -348,36 +409,47 @@ export function ProjectMandate({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget</label>
-                <Input placeholder="$2M" value={form.budget}
+                <Input placeholder="$50,000" value={form.budget}
                   onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget Tolerance</label>
-                <Input placeholder="$500,000" value={form.budgetTolerance}
+                <Input placeholder="$5,000" value={form.budgetTolerance}
                   onChange={(e) => setForm((f) => ({ ...f, budgetTolerance: e.target.value }))} />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scope</label>
-              <p className="text-xs text-muted-foreground">One item per line</p>
-              <Textarea rows={4} placeholder={"Online reservation\nEvent booking\nChef and Culinary Information"}
-                value={form.scope} onChange={(e) => setForm((f) => ({ ...f, scope: e.target.value }))} className="text-sm" />
+              <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
+              <BulletTextarea
+                rows={4}
+                placeholder={"• Online reservation system&#10;• Event booking&#10;• Chef profiles"}
+                value={form.scope}
+                onChange={(val) => setForm((f) => ({ ...f, scope: val }))}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expected Key Deliverables</label>
-              <p className="text-xs text-muted-foreground">One item per line</p>
-              <Textarea rows={6}
-                placeholder={"High Level Project Plan\nProject Charter\nUsecase Document\nUser Story Backlog\nBRD\nTesting Documents\nRTM"}
-                value={form.keyDeliverables} onChange={(e) => setForm((f) => ({ ...f, keyDeliverables: e.target.value }))} className="text-sm" />
+              <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
+              <BulletTextarea
+                rows={6}
+                placeholder={"• High Level Project Plan&#10;• Project Charter&#10;• Use Case Document&#10;• User Story Backlog&#10;• BRD&#10;• Testing Documents"}
+                value={form.keyDeliverables}
+                onChange={(val) => setForm((f) => ({ ...f, keyDeliverables: val }))}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Steps</label>
-              <p className="text-xs text-muted-foreground">One item per line</p>
-              <Textarea rows={3} placeholder={"Download Basecamp App\nUpload Profile Picture on Basecamp"}
-                value={form.nextSteps} onChange={(e) => setForm((f) => ({ ...f, nextSteps: e.target.value }))} className="text-sm" />
+              <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
+              <BulletTextarea
+                rows={3}
+                placeholder={"• Review the project mandate&#10;• Join the project chat&#10;• Attend the kickoff session"}
+                value={form.nextSteps}
+                onChange={(val) => setForm((f) => ({ ...f, nextSteps: val }))}
+              />
             </div>
           </div>
 

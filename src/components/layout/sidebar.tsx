@@ -127,10 +127,10 @@ export function Sidebar({
         {isStudent ? (
           <>
             <SectionLabel label="Work" collapsed={collapsed} />
-            <NavItem href="/student-home" label="Home" icon={Home} collapsed={collapsed} onClick={onClose} />
+            <NavItem href="/dashboard" label="Home" icon={Home} collapsed={collapsed} onClick={onClose} />
             {studentProjectId ? (
               <>
-                <NavItem href={`/projects/${studentProjectId}/phases`}  label="My Project" icon={FolderKanban} collapsed={collapsed} onClick={onClose} />
+                <NavItem href={`/projects/${studentProjectId}`}  label="My Project" icon={FolderKanban} collapsed={collapsed} onClick={onClose} />
                 <NavItem href={`/projects/${studentProjectId}/members`} label="Team"        icon={Users2}       collapsed={collapsed} onClick={onClose} />
               </>
             ) : (

@@ -44,9 +44,9 @@ export default async function ProjectLayout({
   };
 
   return (
-    <div className="space-y-0 -mt-8 -mx-6">
+    <div className="space-y-0 -mt-8 -mx-4 sm:-mx-6">
       {/* Project header */}
-      <div className="px-6 pt-7 pb-0 bg-card border-b border-border">
+      <div className="px-4 sm:px-6 pt-7 pb-0 bg-card border-b border-border">
         <div className="max-w-[1440px] mx-auto">
 
           {/* Back link */}
@@ -99,7 +99,7 @@ export default async function ProjectLayout({
       </div>
 
       {/* Tab content */}
-      <div className="px-6 pt-6 max-w-[1440px] mx-auto w-full">
+      <div className="px-4 sm:px-6 pt-6 max-w-[1440px] mx-auto w-full">
         {children}
       </div>
     </div>

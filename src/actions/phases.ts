@@ -139,11 +139,30 @@ export async function deletePhase(phaseId: string) {
 
   const phase = await db.projectPhase.findFirst({
     where: { id: phaseId, project: { organizationId: org.id } },
-    select: { projectId: true },
+    select: { projectId: true, order: true },
   });
   if (!phase) throw new Error("Phase not found");
 
   await db.projectPhase.delete({ where: { id: phaseId } });
+
+  // Compact order numbers so there are no gaps after deletion.
+  // Use the same two-pass approach as reorderPhases to avoid unique constraint conflicts.
+  const remaining = await db.projectPhase.findMany({
+    where: { projectId: phase.projectId },
+    orderBy: { order: "asc" },
+    select: { id: true },
+  });
+  if (remaining.length > 0) {
+    const offset = 100000;
+    await db.$transaction([
+      ...remaining.map((p, i) =>
+        db.projectPhase.update({ where: { id: p.id }, data: { order: offset + i } })
+      ),
+      ...remaining.map((p, i) =>
+        db.projectPhase.update({ where: { id: p.id }, data: { order: i + 1 } })
+      ),
+    ]);
+  }
 
   revalidatePath(`/projects/${phase.projectId}/phases`);
 }

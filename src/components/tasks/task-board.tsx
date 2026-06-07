@@ -176,7 +176,7 @@ export function TaskBoard({
             return (
               <div
                 key={status}
-                className="w-[272px] flex flex-col gap-2"
+                className="w-[240px] sm:w-[272px] flex flex-col gap-2"
                 onDragOver={(e) => { e.preventDefault(); setOverColumn(status); }}
                 onDragLeave={(e) => {
                   if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverColumn(null);
