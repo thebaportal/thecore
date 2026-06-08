@@ -40,7 +40,7 @@ export async function inviteToOrganization(
         organizationId: orgId,
         emailAddress: email,
         role,
-        redirectUrl: appUrl,
+        redirectUrl: `${appUrl}/sign-up?redirect_url=${encodeURIComponent("/dashboard")}`,
         inviterUserId: userId,
         publicMetadata: { firstName: invitee.firstName.trim(), lastName: invitee.lastName.trim() },
       });
