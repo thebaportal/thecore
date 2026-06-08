@@ -92,7 +92,11 @@ export async function syncCurrentIdentity() {
     await db.orgMembership.upsert({
       where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
       create: { organizationId: org.id, userId: user.id, role: mappedRole },
-      update: {}, // Preserve existing role (webhook handles intentional changes)
+      // Always write elevated roles so admins aren't silently stuck as MEMBER
+      // when the webhook hasn't fired yet. Never downgrade OWNER.
+      update: mappedRole === "MEMBER"
+        ? {}
+        : { role: mappedRole },
     });
 
     // Fulfil any pending project invitations — webhook fallback for dev/ngrok gaps

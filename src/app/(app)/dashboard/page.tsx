@@ -699,7 +699,13 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const { orgRole } = await auth();
+  const { orgRole, orgId } = await auth();
+
+  // No active org in session — send to org-selection to activate one first.
+  if (!orgId) {
+    const { redirect } = await import("next/navigation");
+    redirect("/organization-selection?redirect_url=%2Fdashboard");
+  }
 
   if (orgRole === "org:member") {
     const studentData = await getStudentDashboardData();
