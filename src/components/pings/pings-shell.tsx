@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, MessageCircle, X, Users } from "lucide-react";
+import { Search, X, Plus } from "lucide-react";
 import { PingListItem } from "./ping-list-item";
 import { NewPingDialog } from "./new-ping-dialog";
 import { createPing } from "@/actions/pings";
@@ -152,9 +152,9 @@ export function PingsShell({
                 <button
                   onClick={() => setNewPingOpen(true)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title="New group message"
+                  title="New conversation"
                 >
-                  <Users className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
 
@@ -199,11 +199,9 @@ export function PingsShell({
 
                 {/* Conversation list */}
                 {filteredPings.length === 0 && !q ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                    <MessageCircle className="w-7 h-7 text-muted-foreground/30 mb-2" />
-                    <p className="text-sm font-medium text-foreground mb-0.5">No messages yet</p>
-                    <p className="text-xs text-muted-foreground">Search for someone above to start a conversation</p>
-                  </div>
+                  <p className="text-xs text-muted-foreground text-center py-10 px-4">
+                    Search above to find someone and start a conversation.
+                  </p>
                 ) : filteredPings.length === 0 && q && filteredMembers.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-8">No results for &ldquo;{search}&rdquo;</p>
                 ) : (
