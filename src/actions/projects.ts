@@ -89,17 +89,15 @@ export async function syncCurrentIdentity() {
       clerkRole === "org:admin"  ? "ADMIN"  :
       "MEMBER";
 
-    const existingMembership = await db.orgMembership.findUnique({
-      where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
-      select: { role: true },
+    // Atomic insert-if-not-exists (ON CONFLICT DO NOTHING)
+    await db.orgMembership.createMany({
+      data: [{ organizationId: org.id, userId: user.id, role: mappedRole }],
+      skipDuplicates: true,
     });
-    if (!existingMembership) {
-      await db.orgMembership.create({
-        data: { organizationId: org.id, userId: user.id, role: mappedRole },
-      });
-    } else if (existingMembership.role === "MEMBER" && mappedRole === "ADMIN") {
-      await db.orgMembership.update({
-        where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
+    // Upgrade MEMBER → ADMIN if Clerk says so; never touches OWNER
+    if (mappedRole === "ADMIN") {
+      await db.orgMembership.updateMany({
+        where: { organizationId: org.id, userId: user.id, role: "MEMBER" },
         data: { role: "ADMIN" },
       });
     }

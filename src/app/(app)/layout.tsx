@@ -73,18 +73,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const dbRole = clerkRoleToDb(orgRole);
-  const existingMembership = await db.orgMembership.findUnique({
-    where: { organizationId_userId: { organizationId: dbOrg.id, userId: dbUser.id } },
-    select: { role: true },
+  // Atomic insert-if-not-exists (ON CONFLICT DO NOTHING)
+  await db.orgMembership.createMany({
+    data: [{ organizationId: dbOrg.id, userId: dbUser.id, role: dbRole }],
+    skipDuplicates: true,
   });
-  if (!existingMembership) {
-    await db.orgMembership.create({
-      data: { organizationId: dbOrg.id, userId: dbUser.id, role: dbRole },
-    });
-  } else if (existingMembership.role === "MEMBER" && dbRole === "ADMIN") {
-    // Upgrade MEMBER → ADMIN when Clerk session confirms it; never touch OWNER
-    await db.orgMembership.update({
-      where: { organizationId_userId: { organizationId: dbOrg.id, userId: dbUser.id } },
+  // Upgrade MEMBER → ADMIN if Clerk says so; never touches OWNER
+  if (dbRole === "ADMIN") {
+    await db.orgMembership.updateMany({
+      where: { organizationId: dbOrg.id, userId: dbUser.id, role: "MEMBER" },
       data: { role: "ADMIN" },
     });
   }
