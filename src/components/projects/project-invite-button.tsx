@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { UserPlus, Loader2, Plus, X, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { inviteToProject, type ProjectInviteeInput, type ProjectInviteResult } from "@/actions/invitations";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
   const [results, setResults] = useState<ProjectInviteResult[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   function handleOpen() {
     setOpen(true);
@@ -60,6 +62,7 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
   function handleClose() {
     if (isPending) return;
     setOpen(false);
+    if (step === "done") router.refresh();
   }
 
   function updateRow(id: string, field: keyof ProjectInviteeInput, value: string) {
