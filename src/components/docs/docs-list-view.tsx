@@ -9,6 +9,7 @@ import {
   Home, LayoutGrid, List, Check, X, Upload, File, FileImage,
   FileVideo, FileAudio, Download, Eye, Paperclip,
 } from "lucide-react";
+import { getFolderIcon } from "@/lib/folder-icon";
 import { createDoc, createDocFolder, deleteDoc } from "@/actions/docs";
 import { deleteProjectFile } from "@/actions/files";
 import { useUploadThing } from "@/lib/uploadthing";
@@ -304,14 +305,19 @@ export function DocsListView({
       {!isEmpty && view === "list" && (
         <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
 
-          {folders.map((folder) => (
+          {folders.map((folder) => {
+            const { Icon: FolderIcon, iconColor, bgColor, borderColor } = getFolderIcon(folder.name);
+            return (
             <Link
               key={folder.id}
               href={`/projects/${projectId}/docs?folder=${folder.id}`}
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors group"
             >
-              <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
-                <Folder className="w-4 h-4 text-amber-500" />
+              <div
+                className="w-8 h-8 rounded-lg border flex items-center justify-center shrink-0"
+                style={{ backgroundColor: bgColor, borderColor }}
+              >
+                <FolderIcon className="w-4 h-4" style={{ color: iconColor }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{folder.name}</p>
@@ -325,7 +331,8 @@ export function DocsListView({
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </Link>
-          ))}
+            );
+          })}
 
           {docs.map((doc) => (
             <div
@@ -418,23 +425,29 @@ export function DocsListView({
 
           {folders.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {folders.map((folder) => (
-                <Link
-                  key={folder.id}
-                  href={`/projects/${projectId}/docs?folder=${folder.id}`}
-                  className="group flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:shadow-sm hover:border-border/80 transition-all text-center"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
-                    <Folder className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground line-clamp-2 leading-snug w-full group-hover:text-primary transition-colors">
-                    {folder.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {folder._count.docs + folder._count.files} item{folder._count.docs + folder._count.files !== 1 ? "s" : ""}
-                  </p>
-                </Link>
-              ))}
+              {folders.map((folder) => {
+                const { Icon, iconColor, bgColor, borderColor } = getFolderIcon(folder.name);
+                return (
+                  <Link
+                    key={folder.id}
+                    href={`/projects/${projectId}/docs?folder=${folder.id}`}
+                    className="group flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 hover:shadow-sm hover:border-border/80 transition-all text-center"
+                  >
+                    <div
+                      className="w-12 h-12 rounded-xl border flex items-center justify-center"
+                      style={{ backgroundColor: bgColor, borderColor }}
+                    >
+                      <Icon className="w-6 h-6" style={{ color: iconColor }} />
+                    </div>
+                    <p className="text-sm font-medium text-foreground line-clamp-2 leading-snug w-full group-hover:text-primary transition-colors">
+                      {folder.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {folder._count.docs + folder._count.files} item{folder._count.docs + folder._count.files !== 1 ? "s" : ""}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           )}
 

@@ -39,6 +39,7 @@ export type ProjectCard = {
   name: string;
   color: string | null;
   iconEmoji: string | null;
+  status: string;
   totalPhases: number;
   completedPhases: number;
   currentPhaseName: string | null;
@@ -46,6 +47,7 @@ export type ProjectCard = {
   studentCount: number;
   awaitingReview: number;
   nextDueDate: Date | null;
+  nextSession: { title: string; datetime: Date } | null;
 };
 
 export type CohortDashboardData = {
@@ -103,7 +105,7 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
       where: { organizationId: org.id, status: "ACTIVE" },
       orderBy: { updatedAt: "desc" },
       select: {
-        id: true, name: true, color: true, iconEmoji: true,
+        id: true, name: true, color: true, iconEmoji: true, status: true,
         sessions: {
           where: { datetime: { gte: now } },
           orderBy: { datetime: "asc" },
@@ -222,6 +224,7 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
       name: p.name,
       color: p.color,
       iconEmoji: p.iconEmoji,
+      status: p.status,
       totalPhases: p.phases.length,
       completedPhases,
       currentPhaseName: currentPhase?.name ?? null,
@@ -229,6 +232,9 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
       studentCount: students.length,
       awaitingReview,
       nextDueDate,
+      nextSession: p.sessions[0]
+        ? { title: p.sessions[0].title, datetime: p.sessions[0].datetime }
+        : null,
     };
   });
 

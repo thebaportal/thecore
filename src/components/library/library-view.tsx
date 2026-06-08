@@ -19,6 +19,7 @@ import {
 import { useUploadThing } from "@/lib/uploadthing";
 import { Button } from "@/components/ui/button";
 import { WorkspaceLabel } from "@/components/shared/workspace-banner";
+import { getFolderIcon } from "@/lib/folder-icon";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -689,6 +690,7 @@ export function LibraryView({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {folders.map((folder) => {
               const { from, to } = coverColors(folder.id);
+              const { Icon: FolderIcon, iconColor, bgColor, borderColor } = getFolderIcon(folder.name);
               const itemCount = folder._count.docs + folder._count.files;
               const parts = [
                 folder._count.docs > 0 && `${folder._count.docs} doc${folder._count.docs !== 1 ? "s" : ""}`,
@@ -738,10 +740,10 @@ export function LibraryView({
                         <div className="p-4">
                           {/* Icon */}
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                            style={{ backgroundColor: `${from}18` }}
+                            className="w-10 h-10 rounded-lg border flex items-center justify-center mb-3"
+                            style={{ backgroundColor: bgColor, borderColor }}
                           >
-                            <Folder className="w-5 h-5" style={{ color: from }} />
+                            <FolderIcon className="w-5 h-5" style={{ color: iconColor }} />
                           </div>
 
                           {/* Name */}

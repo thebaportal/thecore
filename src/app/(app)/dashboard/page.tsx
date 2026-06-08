@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { format, differenceInDays, formatDistanceToNow, isToday, isTomorrow, isPast } from "date-fns";
+import {
+  format, differenceInDays, formatDistanceToNow,
+  isToday, isTomorrow,
+} from "date-fns";
 import {
   ArrowRight, RotateCcw, Check, Clock,
   MessageSquare, AlertCircle, Upload, CalendarDays,
-  Users, Settings2, Layers, Plus, FileText,
+  Users, Layers, Plus, FileText,
   CheckCircle2, BookOpen, Megaphone,
+  FolderKanban, ClipboardCheck, Zap, UserPlus, Activity,
 } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { getCohortDashboardData } from "@/actions/cohort-dashboard";
 import { getStudentDashboardData } from "@/actions/student-dashboard";
-import type { ProjectCard } from "@/actions/cohort-dashboard";
+import type { CohortDashboardData, ProjectCard } from "@/actions/cohort-dashboard";
 import type { StudentDashboardData } from "@/actions/student-dashboard";
-import { AIBriefingCard } from "@/components/dashboard/ai-briefing-card";
 import { Greeting } from "@/components/dashboard/greeting";
 import { DashboardDate } from "@/components/dashboard/dashboard-date";
 import { DeliverableTracker } from "@/components/dashboard/deliverable-tracker";
@@ -22,13 +25,12 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-// ── Student home ──────────────────────────────────────────────────────────────
+// ─── Shared constants ─────────────────────────────────────────────────────────
 
-function greeting(name: string) {
-  const h = new Date().getHours();
-  const salutation = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-  return `${salutation}, ${name.split(" ")[0]}`;
-}
+const NAVY = "#1E3A8A";
+const GOLD = "#F59E0B";
+
+// ── Student home ──────────────────────────────────────────────────────────────
 
 function DeliverableStatusRow({ title, status, dueDate }: {
   title: string; status: string; dueDate: Date | null;
@@ -73,16 +75,11 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <div className="rounded-2xl overflow-hidden shadow-md">
-
-        {/* Thin gold accent border */}
         <div className="h-[5px]" style={{ backgroundColor: "#FFC400" }} />
-
-        {/* Navy card — greeting + project info */}
         <div
           className="relative overflow-hidden px-5 sm:px-7 pt-5 pb-5"
           style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 60%, #2563eb 100%)" }}
         >
-          {/* Watermark */}
           <span
             className="absolute right-3 bottom-0 text-[130px] font-black leading-none select-none pointer-events-none"
             style={{ color: "rgba(255,255,255,0.05)" }}
@@ -90,11 +87,9 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
           >
             {watermark}
           </span>
-
-          {/* Greeting */}
-          <p className="text-white/50 text-sm mb-3 relative">{greeting(data.user.name)}</p>
-
-          {/* Project info + CTA */}
+          <p className="text-white/50 text-sm mb-3 relative">
+            <Greeting name={data.user.name} />
+          </p>
           <div className="flex items-start justify-between gap-3 relative">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight tracking-tight">
@@ -124,8 +119,6 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
               My Project <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-
-          {/* Phase progress */}
           <div className="flex items-center gap-3 mt-4 relative">
             {totalPhases > 0 ? (
               <>
@@ -151,7 +144,6 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
       {/* ── Content grid ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
 
-        {/* Left — Current Phase (dominant card) */}
         <div className="xl:col-span-3">
           <div className="rounded-2xl border border-border bg-card overflow-hidden h-full">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
@@ -188,12 +180,8 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
                     <Clock className="w-3 h-3 text-muted-foreground/60" />
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-foreground mb-1.5">
-                  No phase has been unlocked yet.
-                </p>
-                <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">
-                  Check back after your next session.
-                </p>
+                <p className="text-sm font-semibold text-foreground mb-1.5">No phase has been unlocked yet.</p>
+                <p className="text-sm text-muted-foreground max-w-[260px] leading-relaxed">Check back after your next session.</p>
               </div>
             ) : myDeliverables.length === 0 ? (
               <div className="flex items-center justify-center px-6 py-12">
@@ -209,24 +197,17 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
           </div>
         </div>
 
-        {/* Right — info panel */}
         <div className="xl:col-span-2 space-y-4">
-
-          {/* Next Session */}
           {nextSession ? (
             <div className="rounded-2xl overflow-hidden border border-amber-200">
               <div className="h-1 bg-amber-400" />
               <div className="px-5 py-4 bg-amber-50/60">
                 <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-2">Next Session</p>
-                <p className="text-xl font-bold text-foreground">
-                  {format(new Date(nextSession.datetime), "EEEE, MMM d")}
-                </p>
+                <p className="text-xl font-bold text-foreground">{format(new Date(nextSession.datetime), "EEEE, MMM d")}</p>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {format(new Date(nextSession.datetime), "h:mm a")} · {nextSession.title}
                 </p>
-                <p className="text-xs text-amber-600 font-medium mt-1.5">
-                  {sessionLabel(nextSession.datetime)}
-                </p>
+                <p className="text-xs text-amber-600 font-medium mt-1.5">{sessionLabel(nextSession.datetime)}</p>
               </div>
             </div>
           ) : (
@@ -242,7 +223,6 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             </div>
           )}
 
-          {/* Your Team */}
           {data.teamMembers.length > 0 && (
             <div className="rounded-2xl border border-border bg-card px-5 py-4">
               <div className="flex items-center justify-between mb-3">
@@ -258,10 +238,7 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
                     {m.avatarUrl ? (
                       <img src={m.avatarUrl} alt={m.name} className="w-7 h-7 rounded-full object-cover ring-2 ring-card" />
                     ) : (
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-card"
-                        style={{ backgroundColor: brandColor }}
-                      >
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-card" style={{ backgroundColor: brandColor }}>
                         {m.name[0]?.toUpperCase()}
                       </div>
                     )}
@@ -272,17 +249,13 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             </div>
           )}
 
-          {/* Project Chat */}
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-muted-foreground" />
                 <h2 className="text-sm font-semibold text-foreground">Project Chat</h2>
               </div>
-              <Link
-                href={`/projects/${projectId}/messages`}
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-              >
+              <Link href={`/projects/${projectId}/messages`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
                 Open <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -293,18 +266,12 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             ) : (
               <div className="divide-y divide-border/50">
                 {data.chatMessages.slice(0, 3).map((m) => (
-                  <Link
-                    key={m.id}
-                    href={`/projects/${projectId}/messages`}
-                    className="flex items-start gap-2.5 px-5 py-3 hover:bg-muted/30 transition-colors"
-                  >
+                  <Link key={m.id} href={`/projects/${projectId}/messages`}
+                    className="flex items-start gap-2.5 px-5 py-3 hover:bg-muted/30 transition-colors">
                     {m.authorAvatar ? (
                       <img src={m.authorAvatar} alt={m.authorName} className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
                     ) : (
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 mt-0.5"
-                        style={{ backgroundColor: brandColor }}
-                      >
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 mt-0.5" style={{ backgroundColor: brandColor }}>
                         {m.authorName[0]?.toUpperCase()}
                       </div>
                     )}
@@ -325,7 +292,6 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
             )}
           </div>
 
-          {/* Quick access tiles */}
           <div className="grid grid-cols-2 gap-2">
             {[
               { label: "Mandates",      href: `/projects/${projectId}/mandate`, icon: BookOpen },
@@ -333,11 +299,8 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
               { label: "Announcements", href: `/projects/${projectId}/posts`,   icon: Megaphone },
               { label: "Resources",     href: `/library`,                       icon: FileText },
             ].map(({ label, href, icon: Icon }) => (
-              <Link
-                key={label}
-                href={href}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-card hover:border-foreground/20 hover:bg-muted/30 transition-all text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
+              <Link key={label} href={href}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-card hover:border-foreground/20 hover:bg-muted/30 transition-all text-sm font-medium text-muted-foreground hover:text-foreground">
                 <Icon className="w-4 h-4 shrink-0" />
                 {label}
               </Link>
@@ -349,146 +312,395 @@ function StudentHome({ data }: { data: StudentDashboardData }) {
   );
 }
 
-// ── Phase progress bar ────────────────────────────────────────────────────────
+// ── Admin home ────────────────────────────────────────────────────────────────
 
-function PhaseProgressBar({ completed, total, currentName }: {
-  completed: number;
-  total: number;
-  currentName: string | null;
-}) {
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const label =
-    total === 0        ? "No phases configured" :
-    completed === total && total > 0 ? "All phases complete" :
-    currentName        ? currentName :
-                         "Not started";
+function AdminHome({ data }: { data: CohortDashboardData }) {
+  const {
+    user, allProjects, totalStudents, upcomingSessions,
+    project, deliverableTracker, studentMembers,
+    studentsWithNoSubmissions, recentSubmissions,
+  } = data;
 
-  return (
-    <div className="space-y-1.5 w-full">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs text-muted-foreground truncate">{label}</span>
-        {total > 0 && (
-          <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-            {completed}/{total}
-          </span>
-        )}
-      </div>
-      {total > 0 && (
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      )}
-    </div>
+  const totalAwaitingReview = allProjects.reduce((s, p) => s + p.awaitingReview, 0);
+  const nextSession = upcomingSessions[0] ?? null;
+
+  // Students needing attention: revision first, then no submissions
+  const studentsWithRevision = studentMembers.filter((s) =>
+    deliverableTracker.some((d) => d.rows.find((r) => r.userId === s.id)?.status === "REVISION_NEEDED")
   );
-}
-
-// ── Projects grid row ─────────────────────────────────────────────────────────
-
-function ProjectRow({ p }: { p: ProjectCard }) {
-  const now = new Date();
-  const daysLeft = p.nextDueDate ? differenceInDays(new Date(p.nextDueDate), now) : null;
+  const revisionIds = new Set(studentsWithRevision.map((s) => s.id));
+  const attentionStudents = [
+    ...studentsWithRevision.map((s) => ({ ...s, issue: "Revision needed" })),
+    ...studentsWithNoSubmissions
+      .filter((s) => !revisionIds.has(s.id))
+      .map((s) => ({ ...s, issue: "No submissions yet" })),
+  ].slice(0, 6);
 
   return (
-    <Link
-      href={`/projects/${p.id}`}
-      className="flex items-center gap-4 px-5 py-3.5 border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors group"
-    >
-      {/* Icon + name */}
-      <div className="flex items-center gap-2.5 w-[180px] shrink-0 min-w-0">
-        {p.iconEmoji ? (
-          <span className="text-lg leading-none shrink-0">{p.iconEmoji}</span>
-        ) : (
-          <div
-            className="w-7 h-7 rounded-lg shrink-0"
-            style={{ backgroundColor: `${p.color ?? "#1E3A8A"}20` }}
-          />
-        )}
-        <span className="text-sm font-semibold text-foreground truncate">{p.name}</span>
-      </div>
+    <div className="space-y-5 pb-16">
 
-      {/* Progress bar */}
-      <div className="flex-1 min-w-0 hidden sm:block">
-        <PhaseProgressBar
-          completed={p.completedPhases}
-          total={p.totalPhases}
-          currentName={p.currentPhaseName}
-        />
-      </div>
-
-      {/* Students */}
-      <div className="w-16 shrink-0 text-right">
-        <span className="text-sm tabular-nums text-muted-foreground">{p.studentCount}</span>
-        <span className="text-xs text-muted-foreground/50 ml-1 hidden md:inline">
-          {p.studentCount === 1 ? "student" : "students"}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-baseline justify-between gap-4">
+        <h1 className="text-2xl font-bold text-foreground">
+          <Greeting name={user.name} /> 👋
+        </h1>
+        <span className="text-sm text-muted-foreground shrink-0">
+          <DashboardDate />
         </span>
       </div>
 
-      {/* Awaiting review */}
-      {p.awaitingReview > 0 ? (
-        <div className="w-20 shrink-0 text-right hidden lg:block">
-          <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md tabular-nums">
-            {p.awaitingReview} review
-          </span>
-        </div>
-      ) : (
-        <div className="w-20 shrink-0 hidden lg:block" />
-      )}
+      {/* ── Summary banner ─────────────────────────────────────────────────── */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 55%, #1d4ed8 100%)" }}
+      >
+        <div className="flex items-center px-6 py-5 gap-0">
+          {/* 4 stats */}
+          <div className="flex flex-1 min-w-0 divide-x divide-white/10">
+            {([
+              { Icon: FolderKanban, value: allProjects.length, label: allProjects.length === 1 ? "Active Project" : "Active Projects" },
+              { Icon: Users,        value: totalStudents,         label: "Students" },
+              { Icon: CalendarDays, value: upcomingSessions.length, label: "Upcoming Sessions" },
+              { Icon: ClipboardCheck, value: totalAwaitingReview, label: "Pending Reviews" },
+            ] as const).map(({ Icon, value, label }) => (
+              <div key={label} className="flex-1 px-4 first:pl-0 last:pr-4">
+                <Icon className="w-4 h-4 text-white/40 mb-2" />
+                <p className="text-3xl font-bold text-white tabular-nums">{value}</p>
+                <p className="text-xs text-white/50 mt-0.5 leading-snug">{label}</p>
+              </div>
+            ))}
+          </div>
 
-      {/* Next due */}
-      <div className="w-20 shrink-0 text-right">
-        {p.nextDueDate ? (
-          <span className={cn(
-            "text-sm tabular-nums font-medium",
-            daysLeft !== null && daysLeft < 0  ? "text-red-600" :
-            daysLeft !== null && daysLeft <= 3  ? "text-amber-600" :
-            "text-foreground"
-          )}>
-            {format(new Date(p.nextDueDate), "MMM d")}
-          </span>
-        ) : (
-          <span className="text-muted-foreground/30 text-sm">—</span>
-        )}
+          {/* Vertical divider */}
+          <div className="w-px self-stretch bg-white/10 mx-6 shrink-0" />
+
+          {/* Next session */}
+          <div className="shrink-0 w-44">
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-2">Next Session</p>
+            {nextSession ? (
+              <>
+                <p className="text-sm font-bold text-white leading-tight">
+                  {format(new Date(nextSession.datetime), "MMMM d, yyyy")}
+                </p>
+                <p className="text-xs text-white/50 mt-0.5 line-clamp-2 leading-snug">{nextSession.title}</p>
+              </>
+            ) : (
+              <p className="text-xs text-white/30">No sessions scheduled</p>
+            )}
+            <Link
+              href={`/projects/${project.id}`}
+              className="inline-flex items-center gap-1.5 mt-3 px-4 py-1.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{ backgroundColor: GOLD, color: "#78350f" }}
+            >
+              View Project
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-    </Link>
-  );
-}
+      {/* ── 2×2 dashboard grid ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-// ── Team roster (empty-state) ─────────────────────────────────────────────────
-
-function TeamRoster({ students }: {
-  students: { id: string; name: string; avatarUrl: string | null }[]
-}) {
-  if (students.length === 0) return (
-    <p className="text-sm text-muted-foreground py-4">No students assigned yet.</p>
-  );
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {students.map((s) => (
-        <div key={s.id} className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card">
-          {s.avatarUrl
-            ? <img src={s.avatarUrl} alt={s.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
-            : <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
-                {s.name[0]?.toUpperCase()}
-              </div>
-          }
-          <p className="text-xs font-medium text-foreground truncate">{s.name.split(" ")[0]}</p>
+        {/* Upcoming Sessions */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-sm font-semibold text-foreground">Upcoming Sessions</span>
+            </div>
+            <Link href={`/projects/${project.id}`} className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              View all
+            </Link>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            {upcomingSessions.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">No sessions scheduled.</p>
+            ) : (
+              upcomingSessions.slice(0, 3).map((s, i) => (
+                <div key={s.id} className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold"
+                    style={{
+                      backgroundColor: i % 2 === 0 ? `${NAVY}18` : `${GOLD}25`,
+                      color: i % 2 === 0 ? NAVY : "#D97706",
+                    }}
+                  >
+                    {format(new Date(s.datetime), "d")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {format(new Date(s.datetime), "MMM d · h:mm a")}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+            <Link
+              href={`/projects/${project.id}`}
+              className="flex items-center gap-1.5 pt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              <CalendarDays className="w-3 h-3" /> View Calendar
+            </Link>
+          </div>
         </div>
-      ))}
+
+        {/* Quick Actions */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex items-center px-4 py-3 border-b border-border/50">
+            <Zap className="w-3.5 h-3.5 text-muted-foreground mr-2" />
+            <span className="text-sm font-semibold text-foreground">Quick Actions</span>
+          </div>
+          <div className="px-4 py-1 divide-y divide-border/40">
+            {([
+              { Icon: Plus,        label: "New Project",          href: "/projects" },
+              { Icon: UserPlus,    label: "Invite Student",        href: "/team" },
+              { Icon: CalendarDays, label: "Schedule Session",    href: `/projects/${project.id}` },
+              { Icon: Megaphone,   label: "Create Announcement",  href: "/announcements" },
+              { Icon: Upload,      label: "Upload Resource",       href: "/library" },
+            ] as const).map(({ Icon, label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                className="flex items-center gap-3 py-2.5 text-sm text-foreground hover:text-primary transition-colors group"
+              >
+                <Icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                {label}
+                <ArrowRight className="w-3 h-3 ml-auto text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-sm font-semibold text-foreground">Recent Activity</span>
+            </div>
+            <Link href={`/projects/${project.id}/phases`} className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              View all
+            </Link>
+          </div>
+          <div className="divide-y divide-border/40">
+            {recentSubmissions.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-4 py-6 text-center">No recent activity.</p>
+            ) : (
+              recentSubmissions.slice(0, 5).map((s) => {
+                const actionWord =
+                  s.status === "APPROVED"        ? "approved" :
+                  s.status === "REVISION_NEEDED" ? "returned for revision" :
+                  "submitted";
+                return (
+                  <div key={s.id} className="flex items-start gap-3 px-4 py-3">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
+                      style={{ backgroundColor: NAVY }}
+                    >
+                      {s.userName[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground leading-snug">
+                        <span className="font-medium">{s.userName.split(" ")[0]}</span>{" "}
+                        <span className="text-muted-foreground">{actionWord}</span>{" "}
+                        <span className="font-medium">&ldquo;{s.deliverableTitle}&rdquo;</span>
+                      </p>
+                      {s.submittedAt && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {formatDistanceToNow(new Date(s.submittedAt), { addSuffix: true })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Students Needing Attention */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-sm font-semibold text-foreground">Students Needing Attention</span>
+            </div>
+            <Link href={`/projects/${project.id}/phases`} className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              View all
+            </Link>
+          </div>
+          <div className="divide-y divide-border/40">
+            {attentionStudents.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 px-4 py-6">
+                <Check className="w-4 h-4 text-emerald-500" />
+                <p className="text-xs text-muted-foreground">All students on track.</p>
+              </div>
+            ) : (
+              attentionStudents.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/projects/${project.id}/phases`}
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors group"
+                >
+                  {s.avatarUrl ? (
+                    <img src={s.avatarUrl} alt={s.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                      style={{ backgroundColor: NAVY }}
+                    >
+                      {s.name[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{s.name.split(" ")[0]}</p>
+                    <p className="text-xs text-muted-foreground">{s.issue}</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Projects table ─────────────────────────────────────────────────── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">Projects</h2>
+          <Link href="/projects" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+            View all projects
+          </Link>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {/* Column headers */}
+          <div className="hidden md:grid grid-cols-[1fr_100px_160px_90px_170px_110px] items-center px-5 py-2.5 border-b border-border/50 bg-muted/20 gap-4">
+            {(["Name", "Status", "Progress", "Students", "Next Session", ""] as const).map((h) => (
+              <span key={h} className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">{h}</span>
+            ))}
+          </div>
+
+          {allProjects.map((p) => {
+            const pct = p.totalPhases > 0 ? Math.round((p.completedPhases / p.totalPhases) * 100) : 0;
+            const displayStatus =
+              p.completedPhases === p.totalPhases && p.totalPhases > 0 ? "Complete" :
+              p.completedPhases > 0 ? "In Progress" : "Planning";
+            const statusCls =
+              displayStatus === "Complete"    ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+              displayStatus === "In Progress" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                               "bg-muted text-muted-foreground border-border";
+            return (
+              <div
+                key={p.id}
+                className="hidden md:grid grid-cols-[1fr_100px_160px_90px_170px_110px] items-center px-5 py-4 border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors gap-4"
+              >
+                {/* Name */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {p.iconEmoji ? (
+                    <span className="text-lg leading-none shrink-0">{p.iconEmoji}</span>
+                  ) : (
+                    <div
+                      className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
+                      style={{ backgroundColor: `${p.color ?? NAVY}18` }}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color ?? NAVY }} />
+                    </div>
+                  )}
+                  <span className="text-sm font-semibold text-foreground truncate">{p.name}</span>
+                </div>
+
+                {/* Status */}
+                <span className={cn("text-[10px] font-semibold px-2.5 py-0.5 rounded-full border w-fit whitespace-nowrap", statusCls)}>
+                  {displayStatus}
+                </span>
+
+                {/* Progress */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: NAVY }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground tabular-nums shrink-0 w-8 text-right">{pct}%</span>
+                </div>
+
+                {/* Students */}
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {p.studentCount}
+                  <span className="text-xs ml-1">students</span>
+                </span>
+
+                {/* Next session */}
+                <div className="min-w-0">
+                  {p.nextSession ? (
+                    <>
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {format(new Date(p.nextSession.datetime), "MMM d, yyyy")}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate mt-0.5">{p.nextSession.title}</p>
+                    </>
+                  ) : p.nextDueDate ? (
+                    <p className="text-xs text-muted-foreground">{format(new Date(p.nextDueDate), "MMM d")}</p>
+                  ) : (
+                    <span className="text-muted-foreground/30 text-xs">—</span>
+                  )}
+                </div>
+
+                {/* Action */}
+                <Link
+                  href={`/projects/${p.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                >
+                  Open Project
+                </Link>
+              </div>
+            );
+          })}
+
+          {/* Mobile rows */}
+          {allProjects.map((p) => (
+            <Link
+              key={`mob-${p.id}`}
+              href={`/projects/${p.id}`}
+              className="md:hidden flex items-center gap-3 px-4 py-3.5 border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors"
+            >
+              {p.iconEmoji ? (
+                <span className="text-lg leading-none shrink-0">{p.iconEmoji}</span>
+              ) : (
+                <div className="w-7 h-7 rounded-lg shrink-0" style={{ backgroundColor: `${p.color ?? NAVY}18` }} />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{p.studentCount} students</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+            </Link>
+          ))}
+
+          {/* New project */}
+          <div className="px-5 py-3 bg-muted/10">
+            <Link
+              href="/projects"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Project
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
   const { orgRole } = await auth();
 
-  // ── Student home ──────────────────────────────────────────────────────────
   if (orgRole === "org:member") {
     const studentData = await getStudentDashboardData();
     if (!studentData) {
@@ -511,429 +723,5 @@ export default async function DashboardPage() {
     );
   }
 
-  const {
-    user, orgName, allProjects, totalStudents,
-    project, phases, currentPhase, studentMembers,
-    deliverableTracker, awaitingReview, studentsWithNoSubmissions,
-    upcomingSessions, recentSubmissions, recentPings, unreadPingCount,
-  } = data;
-
-  const now = new Date();
-  const totalPhases        = phases.length;
-  const completedCount     = phases.filter((p) => p.status === "COMPLETED").length;
-  const phasesConfigured   = totalPhases > 0;
-  const totalAwaitingReview = allProjects.reduce((s, p) => s + p.awaitingReview, 0);
-
-  const daysLeft = currentPhase?.dueDate
-    ? differenceInDays(new Date(currentPhase.dueDate), now)
-    : null;
-
-  const pendingReviewTotal     = awaitingReview.reduce((s, d) => s + d.count, 0);
-  const needsAttentionCount    = awaitingReview.length + studentsWithNoSubmissions.length;
-
-  const briefingInput = {
-    userName: user.name.split(" ")[0] ?? user.name,
-    orgName,
-    overdueTasks: [],
-    dueTodayTasks: [],
-    atRiskProjects: [],
-    unreadPings: unreadPingCount,
-    isAdminView: true,
-    activeProjects: allProjects.length,
-    activeProjectNames: allProjects.map((p) => p.name),
-    pendingReviews: totalAwaitingReview,
-    overdueTaskCount: 0,
-    activePhaseSummary: currentPhase ? [{
-      projectName: project.name,
-      phaseName: currentPhase.name,
-      submitted: deliverableTracker.reduce((s, d) => s + d.submitted + d.approved + d.needsRevision, 0),
-      revisionNeeded: deliverableTracker.reduce((s, d) => s + d.needsRevision, 0),
-      notSubmitted: deliverableTracker.reduce((s, d) => s + d.notSubmitted, 0),
-      daysLeft,
-    }] : [],
-  };
-
-  return (
-    <div className="space-y-6 pb-16">
-
-      {/* Greeting */}
-      <div>
-        <p className="text-xs text-muted-foreground">
-          <DashboardDate orgName={orgName} />
-        </p>
-        <h1 className="text-lg font-semibold text-foreground mt-0.5">
-          <Greeting name={user.name} />
-        </h1>
-      </div>
-
-      {/* Org snapshot — compact text stats */}
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-sm">
-        <span className="font-semibold text-foreground">{orgName}</span>
-        <span className="text-border">·</span>
-        <Link href="/projects" className="text-muted-foreground hover:text-foreground transition-colors">
-          <span className="font-semibold text-foreground">{allProjects.length}</span>
-          {" "}active project{allProjects.length !== 1 ? "s" : ""}
-        </Link>
-        <span className="text-border">·</span>
-        <Link href="/team" className="text-muted-foreground hover:text-foreground transition-colors">
-          <span className="font-semibold text-foreground">{totalStudents}</span>
-          {" "}student{totalStudents !== 1 ? "s" : ""}
-        </Link>
-        {totalAwaitingReview > 0 && (
-          <>
-            <span className="text-border">·</span>
-            <span className="text-muted-foreground">
-              <span className="font-semibold text-amber-600">{totalAwaitingReview}</span>
-              {" "}awaiting review
-            </span>
-          </>
-        )}
-        {unreadPingCount > 0 && (
-          <>
-            <span className="text-border">·</span>
-            <Link href="/inbox" className="text-muted-foreground hover:text-foreground transition-colors">
-              <span className="font-semibold text-primary">{unreadPingCount}</span>
-              {" "}unread
-            </Link>
-          </>
-        )}
-      </div>
-
-      {/* All Projects grid */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {/* Column headers */}
-        <div className="flex items-center gap-4 px-5 py-2 border-b border-border/50 bg-muted/20">
-          <span className="w-[180px] shrink-0 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Project
-          </span>
-          <span className="flex-1 min-w-0 hidden sm:block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Progress
-          </span>
-          <span className="w-16 shrink-0 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Students
-          </span>
-          <span className="w-20 shrink-0 hidden lg:block text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Review
-          </span>
-          <span className="w-20 shrink-0 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-            Next due
-          </span>
-          <span className="w-3.5 shrink-0" />
-        </div>
-
-        {allProjects.map((p) => (
-          <ProjectRow key={p.id} p={p} />
-        ))}
-
-        {/* New project CTA */}
-        <div className="px-5 py-3 bg-muted/10">
-          <Link
-            href="/projects"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New project
-          </Link>
-        </div>
-      </div>
-
-      {/* ── Two-column detailed section ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-
-        {/* Left — operational detail for focused project */}
-        <div className="xl:col-span-3 space-y-5">
-
-          {/* Focus label when multiple projects exist */}
-          {allProjects.length > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                Detail view for{" "}
-                <Link href={`/projects/${project.id}`} className="font-semibold text-foreground hover:text-primary transition-colors">
-                  {project.name}
-                </Link>
-              </p>
-              <Link href={`/projects/${project.id}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                Open project <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          )}
-
-          {phasesConfigured ? (
-            <>
-              {/* Deliverable tracker */}
-              {currentPhase && (
-                <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h2 className="text-sm font-semibold text-foreground">Deliverable tracker</h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {currentPhase.name} — click a row to see per-student status
-                      </p>
-                    </div>
-                    <Link
-                      href={`/projects/${project.id}/phases`}
-                      className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                    >
-                      Full view <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                  <DeliverableTracker deliverables={deliverableTracker} projectId={project.id} />
-                </section>
-              )}
-
-              {/* Needs attention */}
-              {needsAttentionCount > 0 && (
-                <section>
-                  <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                    Needs attention
-                  </h2>
-                  <div className="space-y-2">
-                    {awaitingReview.length > 0 && (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50/50 overflow-hidden">
-                        <div className="px-4 py-2 border-b border-amber-200/60">
-                          <p className="text-xs font-semibold text-amber-800">Awaiting your review</p>
-                        </div>
-                        {awaitingReview.map((d) => (
-                          <Link key={d.id} href={`/projects/${project.id}/phases`}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50/80 transition-colors">
-                            <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span className="flex-1 text-sm text-foreground truncate">{d.title}</span>
-                            <span className="text-xs font-semibold text-amber-700 shrink-0">
-                              {d.count} {d.count === 1 ? "submission" : "submissions"}
-                            </span>
-                            <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                    {studentsWithNoSubmissions.length > 0 && (
-                      <div className="rounded-xl border border-border bg-card overflow-hidden">
-                        <div className="px-4 py-2 border-b border-border/60 bg-muted/30">
-                          <p className="text-xs font-semibold text-muted-foreground">
-                            No submissions yet — {currentPhase?.name}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 px-4 py-3">
-                          {studentsWithNoSubmissions.map((s) => (
-                            <div key={s.id}
-                              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border bg-muted/40 text-xs font-medium text-foreground">
-                              {s.avatarUrl
-                                ? <img src={s.avatarUrl} alt={s.name} className="w-4 h-4 rounded-full object-cover" />
-                                : <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">
-                                    {s.name[0]?.toUpperCase()}
-                                  </div>
-                              }
-                              {s.name.split(" ")[0]}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {/* Recent submissions */}
-              {recentSubmissions.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold text-foreground">Recent submissions</h2>
-                    <Link href={`/projects/${project.id}/phases`}
-                      className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                      All phases <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card divide-y divide-border/50 overflow-hidden">
-                    {recentSubmissions.map((s) => (
-                      <div key={s.id} className="flex items-start gap-3 px-4 py-3">
-                        <div className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                          s.status === "APPROVED"        ? "bg-emerald-100 text-emerald-600" :
-                          s.status === "REVISION_NEEDED" ? "bg-red-100 text-red-600" :
-                                                           "bg-amber-100 text-amber-600"
-                        )}>
-                          {s.status === "APPROVED"        ? <Check className="w-3.5 h-3.5" /> :
-                           s.status === "REVISION_NEEDED" ? <RotateCcw className="w-3.5 h-3.5" /> :
-                                                            <Upload className="w-3.5 h-3.5" />}
-                        </div>
-                        <p className="flex-1 text-sm text-foreground leading-snug">
-                          <span className="font-medium">{s.userName.split(" ")[0]}</span>
-                          {" "}<span className="text-muted-foreground">
-                            {s.status === "APPROVED"        ? "approved" :
-                             s.status === "REVISION_NEEDED" ? "needs revision on" : "submitted"}{" "}
-                            &ldquo;{s.deliverableTitle}&rdquo;
-                          </span>
-                        </p>
-                        {s.submittedAt && (
-                          <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums mt-0.5">
-                            {formatDistanceToNow(new Date(s.submittedAt), { addSuffix: false })}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </>
-          ) : (
-            <>
-              {/* Empty state: phases not configured */}
-              <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-8 text-center space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-                  <Layers className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">No phases configured</p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Add phases and deliverables to unlock the tracker, submission status, and needs-attention alerts.
-                  </p>
-                </div>
-                <Link
-                  href={`/projects/${project.id}/phases`}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
-                >
-                  <Settings2 className="w-3.5 h-3.5" />
-                  Set up phases
-                </Link>
-              </div>
-
-              <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    Cohort team
-                  </h2>
-                  <Link href={`/projects/${project.id}/members`}
-                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                    Manage <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-                <TeamRoster students={studentMembers} />
-              </section>
-
-              {recentPings.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold text-foreground">Conversations</h2>
-                    <Link href="/inbox" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                      All <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                  <div className="rounded-xl border border-border bg-card overflow-hidden">
-                    {recentPings.slice(0, 5).map((ping) => {
-                      const lastMsg  = ping.messages[0];
-                      const other    = ping.participants.find((p) => p.user.id !== user.id);
-                      const name     = ping.type === "DIRECT"
-                        ? (other?.user.name ?? "Direct Message")
-                        : ping.project?.name ?? ping.title ?? "Conversation";
-                      const me       = ping.participants.find((p) => p.user.id === user.id);
-                      const isUnread = !!lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
-                      return (
-                        <Link key={ping.id} href={`/inbox/${ping.id}`}
-                          className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors">
-                          <div className="relative shrink-0">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                              {name[0]?.toUpperCase()}
-                            </div>
-                            {isUnread && (
-                              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-card" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-sm truncate", isUnread ? "font-semibold" : "font-medium")}>{name}</p>
-                            {lastMsg && (
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                {lastMsg.body.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1").slice(0, 60)}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
-                            {formatDistanceToNow(new Date(ping.updatedAt), { addSuffix: false })}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Right — context */}
-        <div className="xl:col-span-2 space-y-5">
-
-          {/* Upcoming sessions */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <CalendarDays className="w-4 h-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-foreground">Upcoming sessions</h2>
-            </div>
-            <SessionManager sessions={upcomingSessions} projectId={project.id} />
-          </section>
-
-          {/* Conversations */}
-          {phasesConfigured && recentPings.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Conversations
-                    {unreadPingCount > 0 && (
-                      <span className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                        {unreadPingCount}
-                      </span>
-                    )}
-                  </h2>
-                </div>
-                <Link href="/inbox" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                  All <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                {recentPings.slice(0, 4).map((ping) => {
-                  const lastMsg  = ping.messages[0];
-                  const other    = ping.participants.find((p) => p.user.id !== user.id);
-                  const name     = ping.type === "DIRECT"
-                    ? (other?.user.name ?? "Direct Message")
-                    : ping.project?.name ?? ping.title ?? "Conversation";
-                  const me       = ping.participants.find((p) => p.user.id === user.id);
-                  const isUnread = !!lastMsg && (!me?.lastReadAt || new Date(lastMsg.createdAt) > new Date(me.lastReadAt));
-                  return (
-                    <Link key={ping.id} href={`/inbox/${ping.id}`}
-                      className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors">
-                      <div className="relative shrink-0">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                          {name[0]?.toUpperCase()}
-                        </div>
-                        {isUnread && (
-                          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-card" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn("text-sm truncate", isUnread ? "font-semibold" : "font-medium")}>{name}</p>
-                        {lastMsg && (
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {lastMsg.body.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1").slice(0, 60)}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
-                        {formatDistanceToNow(new Date(ping.updatedAt), { addSuffix: false })}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* AI Briefing */}
-          <AIBriefingCard input={briefingInput} />
-        </div>
-      </div>
-    </div>
-  );
+  return <AdminHome data={data} />;
 }
