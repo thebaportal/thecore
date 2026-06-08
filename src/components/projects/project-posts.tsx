@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Pin, Trash2, Plus, Loader2, Pencil, Copy, Check, Lock } from "lucide-react";
+import { Pin, Trash2, Plus, Loader2, Pencil, Copy, Check, Lock, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -486,9 +486,6 @@ function PostCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-foreground leading-snug">{post.title}</p>
-            {post.category && (
-              <CategoryBadge category={post.category} emoji={categoryEmoji} />
-            )}
             {post.instructorOnly && isInstructor && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/30 text-[10px] font-medium text-amber-600 dark:text-amber-400 shrink-0">
                 <Lock className="w-2.5 h-2.5" />
@@ -496,21 +493,29 @@ function PostCard({
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {post.author.name} · {fmt(post.createdAt)}
-            {post.replies.length > 0 && (
-              <span className="ml-2 text-muted-foreground/50">
-                · {post.replies.length} {post.replies.length === 1 ? "reply" : "replies"}
-              </span>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <span className="text-xs text-muted-foreground">
+              {post.author.name} · {fmt(post.createdAt)}
+            </span>
+            {post.category && (
+              <CategoryBadge category={post.category} emoji={categoryEmoji} />
             )}
-          </p>
+          </div>
           {!expanded && post.body && (
             <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1">{post.body}</p>
           )}
         </div>
-        <span className="text-[10px] text-muted-foreground/40 shrink-0 mt-0.5 font-medium">
-          {expanded ? "▾" : "▸"}
-        </span>
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
+          {post.replies.length > 0 && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+              <MessageCircle className="w-3 h-3" />
+              {post.replies.length}
+            </span>
+          )}
+          <span className="text-[10px] text-muted-foreground/40 font-medium">
+            {expanded ? "▾" : "▸"}
+          </span>
+        </div>
       </button>
 
       {expanded && (
