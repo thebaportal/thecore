@@ -440,7 +440,16 @@ export async function deletePing(pingId: string) {
   const isParticipant = ping.participants.some((p) => p.userId === user.id);
   if (!isParticipant) throw new Error("Not a participant");
 
-  await db.ping.delete({ where: { id: pingId } });
+  // Remove only this user so other participants keep their thread.
+  await db.pingParticipant.delete({
+    where: { pingId_userId: { pingId, userId: user.id } },
+  });
+
+  // If nobody is left, clean up the ping entirely.
+  const remainingCount = ping.participants.filter((p) => p.userId !== user.id).length;
+  if (remainingCount === 0) {
+    await db.ping.delete({ where: { id: pingId } });
+  }
 
   revalidatePath("/inbox");
 }

@@ -50,7 +50,7 @@ export function DeleteConversationButton({ pingId }: { pingId: string }) {
             className="text-destructive focus:text-destructive"
           >
             <Trash2 className="w-3.5 h-3.5 mr-2" />
-            Delete conversation
+            Leave conversation
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -58,16 +58,16 @@ export function DeleteConversationButton({ pingId }: { pingId: string }) {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete conversation?</DialogTitle>
+            <DialogTitle>Leave conversation?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This permanently deletes the conversation and all its messages for everyone. This cannot be undone.
+            This removes the conversation from your inbox. Other participants will still have access to it.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
             <Button variant="destructive" disabled={isPending} onClick={handleConfirm}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              Leave
             </Button>
           </DialogFooter>
         </DialogContent>

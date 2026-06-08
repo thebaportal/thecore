@@ -36,6 +36,11 @@ export default async function InboxThreadPage({
 
   if (!ping) notFound();
 
+  // If the current user is no longer a participant (e.g. they left the conversation),
+  // redirect rather than showing 404 or a broken thread.
+  const isParticipant = ping.participants.some((p) => p.user.id === user?.id);
+  if (!isParticipant) redirect("/inbox");
+
   const messages = await getPingMessages(pingId);
 
   const memberUsers = ping.participants.map((p) => p.user);
