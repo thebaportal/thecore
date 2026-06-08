@@ -104,15 +104,10 @@ export async function POST(req: Request) {
         });
 
         if (pendingInvitations.length > 0) {
-          await Promise.all(
-            pendingInvitations.map((inv) =>
-              db.projectMember.upsert({
-                where: { projectId_userId: { projectId: inv.projectId, userId: user.id } },
-                create: { projectId: inv.projectId, userId: user.id },
-                update: {},
-              })
-            )
-          );
+          await db.projectMember.createMany({
+            data: pendingInvitations.map((inv) => ({ projectId: inv.projectId, userId: user.id })),
+            skipDuplicates: true,
+          });
           await db.projectInvitation.deleteMany({
             where: { id: { in: pendingInvitations.map((i) => i.id) } },
           });

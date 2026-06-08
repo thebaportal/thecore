@@ -89,16 +89,17 @@ export async function syncCurrentIdentity() {
       clerkRole === "org:admin"  ? "ADMIN"  :
       "MEMBER";
 
-    await db.orgMembership.upsert({
+    const existingMembership = await db.orgMembership.findUnique({
       where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
-      create: { organizationId: org.id, userId: user.id, role: mappedRole },
-      update: {}, // Never overwrite — webhook and explicit actions handle changes
+      select: { role: true },
     });
-
-    // Upgrade MEMBER → ADMIN if Clerk session says admin, but never touch OWNER.
-    if (mappedRole === "ADMIN") {
-      await db.orgMembership.updateMany({
-        where: { organizationId: org.id, userId: user.id, role: "MEMBER" },
+    if (!existingMembership) {
+      await db.orgMembership.create({
+        data: { organizationId: org.id, userId: user.id, role: mappedRole },
+      });
+    } else if (existingMembership.role === "MEMBER" && mappedRole === "ADMIN") {
+      await db.orgMembership.update({
+        where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
         data: { role: "ADMIN" },
       });
     }
@@ -116,10 +117,9 @@ export async function syncCurrentIdentity() {
       const toFulfil = isMember ? pendingInvitations.slice(0, 1) : pendingInvitations;
       await Promise.all(
         toFulfil.map((inv) =>
-          db.projectMember.upsert({
-            where: { projectId_userId: { projectId: inv.projectId, userId: user.id } },
-            create: { projectId: inv.projectId, userId: user.id },
-            update: {},
+          db.projectMember.createMany({
+            data: [{ projectId: inv.projectId, userId: user.id }],
+            skipDuplicates: true,
           })
         )
       );

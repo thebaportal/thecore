@@ -625,11 +625,7 @@ async function importLineReactions(
     for (const reaction of reactions) {
       try {
         const userId = await resolveBasecampUser(reaction.person, orgId, fallbackUserId);
-        await db.reaction.upsert({
-          where: { messageId_userId_emoji: { messageId, userId, emoji: reaction.content } },
-          create: { messageId, userId, emoji: reaction.content },
-          update: {},
-        });
+        await db.reaction.createMany({ data: [{ messageId, userId, emoji: reaction.content }], skipDuplicates: true });
       } catch {
         // individual reaction failure is non-fatal
       }
@@ -1026,13 +1022,10 @@ export async function importBasecampProject(bcProjectId: number): Promise<Import
         }
       }
 
-      for (const uid of campfireParticipants) {
-        await db.pingParticipant.upsert({
-          where: { pingId_userId: { pingId: campfirePingId, userId: uid } },
-          create: { pingId: campfirePingId, userId: uid },
-          update: {},
-        });
-      }
+      await db.pingParticipant.createMany({
+        data: [...campfireParticipants].map((uid) => ({ pingId: campfirePingId, userId: uid })),
+        skipDuplicates: true,
+      });
 
       if (campfireLines.length > 0) {
         const lastLine = campfireLines[campfireLines.length - 1]!;
@@ -2213,13 +2206,10 @@ export async function backfillCampfire(): Promise<CampfireBackfillResult> {
         }
       }
 
-      for (const uid of participants) {
-        await db.pingParticipant.upsert({
-          where: { pingId_userId: { pingId, userId: uid } },
-          create: { pingId, userId: uid },
-          update: {},
-        });
-      }
+      await db.pingParticipant.createMany({
+        data: [...participants].map((uid) => ({ pingId, userId: uid })),
+        skipDuplicates: true,
+      });
 
       if (lines.length > 0) {
         const lastLine = lines[lines.length - 1]!;

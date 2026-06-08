@@ -130,10 +130,9 @@ export async function inviteToProject(
             continue;
           }
         }
-        await db.projectMember.upsert({
-          where: { projectId_userId: { projectId, userId: existingUser.id } },
-          create: { projectId, userId: existingUser.id },
-          update: {},
+        await db.projectMember.createMany({
+          data: [{ projectId, userId: existingUser.id }],
+          skipDuplicates: true,
         });
         results.push({ email, status: "added" });
         continue;

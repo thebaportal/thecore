@@ -14,9 +14,8 @@ export async function hideActivityItem(itemId: string) {
   const dbUser = await db.user.findUnique({ where: { clerkUserId: userId }, select: { id: true } });
   if (!dbUser) return;
 
-  await db.activityHide.upsert({
-    where: { userId_organizationId_itemId: { userId: dbUser.id, organizationId: identity.org.id, itemId } },
-    create: { userId: dbUser.id, organizationId: identity.org.id, itemId },
-    update: {},
+  await db.activityHide.createMany({
+    data: [{ userId: dbUser.id, organizationId: identity.org.id, itemId }],
+    skipDuplicates: true,
   });
 }

@@ -72,11 +72,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     });
   }
 
-  await db.orgMembership.upsert({
+  const dbRole = clerkRoleToDb(orgRole);
+  const existingMembership = await db.orgMembership.findUnique({
     where: { organizationId_userId: { organizationId: dbOrg.id, userId: dbUser.id } },
-    create: { organizationId: dbOrg.id, userId: dbUser.id, role: clerkRoleToDb(orgRole) },
-    update: {},
+    select: { role: true },
   });
+  if (!existingMembership) {
+    await db.orgMembership.create({
+      data: { organizationId: dbOrg.id, userId: dbUser.id, role: dbRole },
+    });
+  } else if (existingMembership.role === "MEMBER" && dbRole === "ADMIN") {
+    // Upgrade MEMBER → ADMIN when Clerk session confirms it; never touch OWNER
+    await db.orgMembership.update({
+      where: { organizationId_userId: { organizationId: dbOrg.id, userId: dbUser.id } },
+      data: { role: "ADMIN" },
+    });
+  }
 
   const isStudent = orgRole === "org:member";
   let studentProjectId: string | null = null;

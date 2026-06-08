@@ -245,10 +245,9 @@ export async function reviewDeliverable(
           ? `📝 "${deliverable.title}" needs revision: ${note.trim()}`
           : `📝 "${deliverable.title}" needs revision.`;
 
-    await db.pingParticipant.upsert({
-      where: { pingId_userId: { pingId: generalPing.id, userId: dbUser.id } },
-      create: { pingId: generalPing.id, userId: dbUser.id },
-      update: {},
+    await db.pingParticipant.createMany({
+      data: [{ pingId: generalPing.id, userId: dbUser.id }],
+      skipDuplicates: true,
     });
     await db.message.create({
       data: { pingId: generalPing.id, authorId: dbUser.id, body: pingBody },
