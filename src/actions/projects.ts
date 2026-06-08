@@ -92,12 +92,16 @@ export async function syncCurrentIdentity() {
     await db.orgMembership.upsert({
       where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
       create: { organizationId: org.id, userId: user.id, role: mappedRole },
-      // Always write elevated roles so admins aren't silently stuck as MEMBER
-      // when the webhook hasn't fired yet. Never downgrade OWNER.
-      update: mappedRole === "MEMBER"
-        ? {}
-        : { role: mappedRole },
+      update: {}, // Never overwrite — webhook and explicit actions handle changes
     });
+
+    // Upgrade MEMBER → ADMIN if Clerk session says admin, but never touch OWNER.
+    if (mappedRole === "ADMIN") {
+      await db.orgMembership.updateMany({
+        where: { organizationId: org.id, userId: user.id, role: "MEMBER" },
+        data: { role: "ADMIN" },
+      });
+    }
 
     // Fulfil any pending project invitations — webhook fallback for dev/ngrok gaps
     const email = user.email.toLowerCase();

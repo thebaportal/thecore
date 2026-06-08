@@ -11,6 +11,7 @@ import {
   CheckCircle2, BookOpen, Megaphone,
   FolderKanban, ClipboardCheck, Zap, UserPlus, Activity,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { getCohortDashboardData } from "@/actions/cohort-dashboard";
@@ -702,10 +703,7 @@ export default async function DashboardPage() {
   const { orgRole, orgId } = await auth();
 
   // No active org in session — send to org-selection to activate one first.
-  if (!orgId) {
-    const { redirect } = await import("next/navigation");
-    redirect("/organization-selection?redirect_url=%2Fdashboard");
-  }
+  if (!orgId) redirect("/organization-selection?redirect_url=%2Fdashboard");
 
   if (orgRole === "org:member") {
     const studentData = await getStudentDashboardData();

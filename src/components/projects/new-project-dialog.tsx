@@ -55,6 +55,7 @@ interface NewProjectDialogProps {
 export function NewProjectDialog({ open, onOpenChange, templates: templatesProp = [] }: NewProjectDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<PhaseTemplate[]>(templatesProp);
@@ -85,6 +86,7 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
   }
 
   function onSubmit(data: FormValues) {
+    setSubmitError(null);
     startTransition(async () => {
       try {
         const result = await createProject({
@@ -101,7 +103,7 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
           router.push(`/projects/${result.project.id}`);
         }
       } catch (err) {
-        console.error(err);
+        setSubmitError(err instanceof Error ? err.message : "Failed to create project. Please try again.");
       }
     });
   }
@@ -297,6 +299,10 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
                 <Input {...form.register("targetDate")} type="date" className="h-9 text-sm" />
               </div>
             </div>
+
+            {submitError && (
+              <p className="text-xs text-destructive">{submitError}</p>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-2">

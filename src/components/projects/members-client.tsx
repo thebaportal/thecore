@@ -54,6 +54,7 @@ export function MembersClient({
   const [isPending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [resending, setResending] = useState<ResendState>(null);
+  const [removingInvite, setRemovingInvite] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
   function handleResend(invitationId: string) {
@@ -67,12 +68,19 @@ export function MembersClient({
 
   function handleConfirmAction() {
     if (!confirm) return;
-    startTransition(async () => {
-      if (confirm.kind === "remove") {
-        await removeProjectMember(projectId, confirm.memberId);
-      } else {
+    if (confirm.kind === "revoke") {
+      // Optimistic: hide immediately, confirm with server in background
+      setRemovingInvite(confirm.invitationId);
+      setConfirm(null);
+      startTransition(async () => {
         await revokeProjectInvitation(projectId, confirm.invitationId);
-      }
+        setRemovingInvite(null);
+        router.refresh();
+      });
+      return;
+    }
+    startTransition(async () => {
+      await removeProjectMember(projectId, confirm.memberId);
       setConfirm(null);
       router.refresh();
     });
@@ -184,7 +192,7 @@ export function MembersClient({
           <h3 className="text-sm font-semibold text-foreground">Pending Invitations</h3>
           <div className="rounded-xl border border-border overflow-hidden">
             <ul className="divide-y divide-border">
-              {data.invitations.map((inv) => (
+              {data.invitations.filter((inv) => inv.id !== removingInvite).map((inv) => (
                 <li key={inv.id} className="flex items-center gap-3 px-4 py-3">
                   <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
                     <Mail className="h-4 w-4 text-muted-foreground" />
