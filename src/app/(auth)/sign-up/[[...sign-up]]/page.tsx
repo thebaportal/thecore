@@ -3,6 +3,7 @@ import { SignUp } from "@clerk/nextjs";
 export default function SignUpPage() {
   return (
     <SignUp
+      fallbackRedirectUrl="/organization-selection"
       appearance={{
         variables: {
           colorPrimary: "#1e3a8a",
