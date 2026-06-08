@@ -4,7 +4,7 @@ export const createProjectSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  iconEmoji: z.string().max(2).optional(),
+  iconEmoji: z.string().max(10).optional(),
   startDate: z.coerce.date().optional(),
   targetDate: z.coerce.date().optional(),
   templateId: z.string().optional(),

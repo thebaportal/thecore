@@ -37,7 +37,7 @@ const PROJECT_COLORS = [
   { label: "Slate",   value: "#475569" },
 ];
 
-const PROJECT_EMOJIS = ["📋", "🚀", "⚡", "🎯", "💡", "🔧", "📊", "🌟", "🛠️", "📱", "🎨", "🔬"];
+const PROJECT_EMOJIS = ["📋", "🚀", "⚡", "🎯", "💡", "🔧", "📊", "🌟", "🛠", "📱", "🎨", "🔬"];
 
 type PhaseTemplate = {
   id: string;
