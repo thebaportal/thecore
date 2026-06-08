@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format, isToday, isThisYear, isYesterday } from "date-fns";
 import { SmilePlus, Paperclip, ChevronDown, ChevronUp, Trash2, Pencil, Check, X } from "lucide-react";
@@ -273,8 +273,24 @@ export function MessageBubble({
 }) {
   const router = useRouter();
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+
+  const openEmojiPicker = useCallback(() => {
+    const btn = emojiButtonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    // picker is ~52px tall (32px buttons + 2×8px padding + 4px border)
+    const PICKER_H = 52;
+    const PICKER_W = 248; // 6×32px buttons + 5×4px gaps + 2×8px padding + borders
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow >= PICKER_H + 8 ? rect.bottom + 6 : rect.top - PICKER_H - 6;
+    const left = Math.min(rect.left, window.innerWidth - PICKER_W - 8);
+    setPickerPos({ top, left });
+    setEmojiOpen(true);
+  }, []);
 
   const isOwn = message.author.id === currentUserId;
 
@@ -368,17 +384,21 @@ export function MessageBubble({
 
               {/* Hover actions */}
               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-card border border-border rounded-xl shadow-md px-1.5 py-0.5 shrink-0">
-                <div className="relative">
+                <div>
                   <button
-                    onClick={() => setEmojiOpen((v) => !v)}
+                    ref={emojiButtonRef}
+                    onClick={() => emojiOpen ? setEmojiOpen(false) : openEmojiPicker()}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
                     <SmilePlus className="w-3.5 h-3.5" />
                   </button>
-                  {emojiOpen && (
+                  {emojiOpen && pickerPos && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setEmojiOpen(false)} />
-                      <div className="absolute left-0 top-full mt-1.5 z-50 flex gap-1 p-2 rounded-2xl border border-border bg-card shadow-xl">
+                      <div
+                        style={{ top: pickerPos.top, left: pickerPos.left }}
+                        className="fixed z-50 flex gap-1 p-2 rounded-2xl border border-border bg-card shadow-xl"
+                      >
                         {QUICK_EMOJIS.map((emoji) => (
                           <button key={emoji} onClick={() => handleReact(emoji)}
                             className="w-8 h-8 flex items-center justify-center rounded-xl text-base hover:bg-muted transition-colors">
