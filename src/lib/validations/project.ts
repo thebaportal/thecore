@@ -13,6 +13,8 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = createProjectSchema.partial().extend({
   status: z.enum(["ACTIVE", "ON_HOLD", "COMPLETED", "ARCHIVED"]).optional(),
   nextSession: z.string().max(120).optional().nullable(),
+  instructor: z.string().max(120).optional().nullable(),
+  cohort: z.string().max(120).optional().nullable(),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getProject } from "@/actions/projects";
 import { ProjectTabs } from "@/components/projects/project-tabs";
 import { ProjectHeaderActions } from "@/components/projects/project-header-actions";
+import { ProjectHeaderMeta } from "@/components/projects/project-header-meta";
 import { db } from "@/lib/db";
 
 export default async function ProjectLayout({
@@ -38,9 +39,11 @@ export default async function ProjectLayout({
   const STATUS_LABEL: Record<string, string> = {
     ACTIVE: "Active", ON_HOLD: "On Hold", COMPLETED: "Completed", ARCHIVED: "Archived",
   };
-  const STATUS_COLOR: Record<string, string> = {
-    ACTIVE: "text-emerald-500", ON_HOLD: "text-amber-500",
-    COMPLETED: "text-blue-500", ARCHIVED: "text-muted-foreground",
+  const STATUS_BG: Record<string, string> = {
+    ACTIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    ON_HOLD: "bg-amber-50 text-amber-700 border-amber-200",
+    COMPLETED: "bg-blue-50 text-blue-700 border-blue-200",
+    ARCHIVED: "bg-muted text-muted-foreground border-border",
   };
 
   return (
@@ -61,33 +64,31 @@ export default async function ProjectLayout({
           {/* Title row */}
           <div className="flex items-start gap-4 mb-4">
             <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 mt-0.5"
-              style={{ backgroundColor: `${color}20` }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 mt-0.5 border"
+              style={{ backgroundColor: `${color}15`, borderColor: `${color}30` }}
             >
               {project.iconEmoji ?? (
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color }} />
+                <div className="w-5 h-5 rounded-full" style={{ backgroundColor: color }} />
               )}
             </div>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-foreground tracking-tight leading-tight truncate">
-                {project.name}
-              </h1>
-
-              {/* Stat bar */}
-              <div className="flex items-center gap-2 mt-1.5">
-                {memberCount > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {memberCount} {memberCount === 1 ? "person" : "people"}
-                  </span>
-                )}
-                {memberCount > 0 && (
-                  <span className="text-muted-foreground/30 text-xs">·</span>
-                )}
-                <span className={`text-xs font-medium ${STATUS_COLOR[project.status] ?? "text-emerald-500"}`}>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl font-bold text-foreground tracking-tight leading-tight">
+                  {project.name}
+                </h1>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_BG[project.status] ?? STATUS_BG.ACTIVE}`}>
                   {STATUS_LABEL[project.status] ?? "Active"}
                 </span>
               </div>
+
+              <ProjectHeaderMeta
+                projectId={projectId}
+                instructor={project.instructor ?? null}
+                cohort={project.cohort ?? null}
+                studentCount={memberCount}
+                isInstructor={isInstructor}
+              />
             </div>
 
             {isInstructor && <ProjectHeaderActions project={{ ...project, pinnedAt: project.pinnedAt ?? null }} />}

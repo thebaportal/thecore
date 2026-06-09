@@ -13,9 +13,9 @@ import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { cn } from "@/lib/utils";
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
-  if (collapsed) return <div className="my-1 border-t border-sidebar-border/50" />;
+  if (collapsed) return <div className="my-1 border-t border-white/10" />;
   return (
-    <p className="px-2.5 pt-4 pb-1 text-[10px] font-semibold tracking-widest uppercase text-sidebar-foreground/30 select-none">
+    <p className="px-2.5 pt-4 pb-1 text-[10px] font-semibold tracking-widest uppercase text-white/30 select-none">
       {label}
     </p>
   );
@@ -45,20 +45,20 @@ function NavItem({
       className={cn(
         "flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm transition-colors relative",
         active
-          ? "bg-primary/8 text-primary font-medium before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-primary/70"
-          : "font-normal text-sidebar-foreground/80 hover:bg-muted/50 hover:text-foreground",
+          ? "bg-white/15 text-white font-medium before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-white/70"
+          : "font-normal text-white/60 hover:bg-white/10 hover:text-white",
         collapsed && "justify-center w-10 h-10 mx-auto px-0"
       )}
     >
       <Icon className="w-4 h-4 shrink-0" />
       {!collapsed && <span className="flex-1 truncate">{label}</span>}
       {!collapsed && badge != null && badge > 0 && (
-        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-semibold text-white">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
       {collapsed && badge != null && badge > 0 && (
-        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-white/70" />
       )}
     </Link>
   );

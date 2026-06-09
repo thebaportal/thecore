@@ -451,6 +451,22 @@ export async function getProject(id: string) {
   return { ...project, completedTaskCount: completedCount, members };
 }
 
+export async function updateProjectMeta(
+  id: string,
+  data: { instructor?: string | null; cohort?: string | null }
+) {
+  const { org } = await syncCurrentIdentity();
+  if (!org) throw new Error("No active organization");
+
+  await db.project.update({
+    where: { id, organizationId: org.id },
+    data,
+  });
+
+  revalidatePath(`/projects/${id}`);
+  revalidatePath(`/projects/${id}/mandate`);
+}
+
 export async function toggleProjectPin(id: string) {
   const { orgId } = await auth();
   if (!orgId) throw new Error("Unauthenticated");

@@ -5,7 +5,7 @@ import {
   Pencil, Plus, Loader2,
   FileText, List, ClipboardList,
   Clock, CalendarDays, DollarSign, ChevronRight,
-  CheckCircle2, Circle,
+  CheckCircle2, Circle, CalendarRange,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,13 +104,13 @@ function SectionCard({
   }[accent];
 
   return (
-    <div className={cn("rounded-xl border border-border bg-card overflow-hidden", empty && "border-dashed")}>
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+    <div className={cn("rounded-xl border border-border bg-card overflow-hidden shadow-sm", empty && "border-dashed")}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-muted/20">
         <div className="flex items-center gap-2.5">
           <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", colors.bg)}>
             <Icon className={cn("w-4 h-4", colors.icon)} />
           </div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <h3 className="text-sm font-semibold text-primary">{title}</h3>
         </div>
         {isInstructor && onEdit && (
           <button
@@ -133,7 +133,7 @@ function BulletGrid({ items }: { items: string[] }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
       {items.map((item, i) => (
         <div key={i} className="flex items-start gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-[7px] shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
           <span className="text-sm text-foreground leading-relaxed">{item}</span>
         </div>
       ))}
@@ -146,9 +146,10 @@ function NumberedGrid({ items }: { items: string[] }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
       {items.map((item, i) => (
         <div key={i} className="flex items-start gap-2.5">
-          <span className="text-xs font-bold text-primary/60 tabular-nums mt-0.5 shrink-0 w-4">
-            {i + 1}.
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+            <FileText className="w-4 h-4 text-primary/60" />
+            <span className="text-[10px] font-bold text-primary/50 tabular-nums">{i + 1}</span>
+          </div>
           <span className="text-sm text-foreground leading-relaxed">{item}</span>
         </div>
       ))}
@@ -310,9 +311,9 @@ export function ProjectMandate({
 
           {/* Project Overview */}
           {hasStats && (
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-                <h3 className="text-sm font-semibold text-foreground">Project Overview</h3>
+            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-muted/20">
+                <h3 className="text-sm font-semibold text-primary">Project Overview</h3>
                 {isInstructor && (
                   <button onClick={() => setOpen(true)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                     <Pencil className="w-3.5 h-3.5" />
@@ -353,9 +354,9 @@ export function ProjectMandate({
 
           {/* Next Steps */}
           {(nextStepItems.length > 0 || isInstructor) && (
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
-                <h3 className="text-sm font-semibold text-foreground">Next Steps</h3>
+            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-muted/20">
+                <h3 className="text-sm font-semibold text-primary">Next Steps</h3>
                 {isInstructor && !editingNextSteps && (
                   <button
                     onClick={() => { setNextStepsValue(mandate?.nextSteps ?? ""); setEditingNextSteps(true); }}
@@ -433,7 +434,7 @@ function StatRow({ icon: Icon, iconBg, iconColor, label, value, sub }: {
         <Icon className={cn("w-3.5 h-3.5", iconColor)} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">{label}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/40">{label}</p>
         <p className="text-sm font-semibold text-foreground mt-0.5">{value}</p>
         {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
       </div>
