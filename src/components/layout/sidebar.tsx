@@ -89,42 +89,55 @@ export function Sidebar({
     ? orgName.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
     : "TC";
 
-  const Logo = (
+  const Header = (
     <div className={cn(
-      "flex items-center h-[60px] shrink-0",
-      collapsed ? "justify-center px-0" : "px-3"
+      "flex shrink-0 border-b border-white/10",
+      collapsed
+        ? "flex-col items-center gap-1.5 pt-3 pb-2 px-2"
+        : "flex-row items-center h-[60px] px-3 gap-2"
     )}>
+      {/* Logo / org identity */}
       {collapsed ? (
-        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
       ) : orgLogoUrl ? (
-        <div className="bg-white rounded-xl px-3 py-2 w-full shadow-sm">
-          <img
-            src={orgLogoUrl}
-            alt={orgName}
-            className="h-10 w-auto max-w-full object-contain"
-          />
-        </div>
+        <img
+          src={orgLogoUrl}
+          alt={orgName}
+          className="flex-1 min-w-0 h-9 w-auto max-w-[160px] object-contain brightness-0 invert"
+        />
       ) : (
-        <>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <span className="text-primary-foreground text-xs font-bold">{initials}</span>
           </div>
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate ml-2">
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">
             {orgName || "The Core"}
           </span>
-        </>
+        </div>
       )}
+
+      {/* Collapse toggle — lives in header, never floats */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="p-1 rounded-md text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors shrink-0"
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed
+          ? <ChevronRight className="w-3.5 h-3.5" />
+          : <ChevronLeft className="w-3.5 h-3.5" />
+        }
+      </button>
     </div>
   );
 
   return (
     <aside className={cn(
-      "relative flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-200 ease-in-out shrink-0",
+      "flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-200 ease-in-out shrink-0",
       collapsed ? "w-14" : "w-56"
     )}>
-      {Logo}
+      {Header}
 
       <nav className="flex-1 px-2 py-2 overflow-y-auto">
         {isStudent ? (
@@ -202,16 +215,6 @@ export function Sidebar({
         )}
       </div>
 
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[100px] z-10 w-6 h-6 rounded-full bg-sidebar border border-sidebar-border shadow-sm flex items-center justify-center hover:bg-muted transition-colors"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {collapsed
-          ? <ChevronRight className="w-3 h-3 text-sidebar-foreground" />
-          : <ChevronLeft className="w-3 h-3 text-sidebar-foreground" />
-        }
-      </button>
     </aside>
   );
 }

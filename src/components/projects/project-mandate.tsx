@@ -27,6 +27,15 @@ type Mandate = {
   nextSteps?: string | null;
 };
 
+function formatCurrency(raw: string | null | undefined): string {
+  if (!raw?.trim()) return "";
+  const symbol = raw.includes("€") ? "€" : raw.includes("£") ? "£" : "$";
+  const digits = raw.replace(/[^0-9.]/g, "");
+  const num = parseFloat(digits);
+  if (isNaN(num)) return raw;
+  return symbol + num.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
 function parseList(text: string | null | undefined): string[] {
   if (!text?.trim()) return [];
   return text
@@ -40,6 +49,37 @@ function fmtDate(d: Date | string | null | undefined) {
   return new Date(d as string | Date).toLocaleDateString("en-US", {
     month: "short", day: "numeric", year: "numeric",
   });
+}
+
+function CurrencyInput({ value, onChange, placeholder, disabled }: {
+  value: string; onChange: (val: string) => void; placeholder?: string; disabled?: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [raw, setRaw] = useState(value);
+
+  function handleFocus() {
+    setFocused(true);
+    setRaw(value.replace(/[^0-9.]/g, ""));
+  }
+
+  function handleBlur() {
+    setFocused(false);
+    const formatted = formatCurrency(raw);
+    const final = formatted || raw;
+    setRaw(final);
+    onChange(final);
+  }
+
+  return (
+    <Input
+      value={focused ? raw : (formatCurrency(value) || value)}
+      onChange={(e) => setRaw(e.target.value)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  );
 }
 
 function BulletTextarea({ value, onChange, rows, placeholder, autoFocus }: {
@@ -344,8 +384,8 @@ export function ProjectMandate({
                 {mandate.budget && (
                   <StatRow
                     icon={DollarSign} iconBg="bg-emerald-50" iconColor="text-emerald-600"
-                    label="Budget" value={mandate.budget}
-                    sub={mandate.budgetTolerance ? `± ${mandate.budgetTolerance}` : undefined}
+                    label="Budget" value={formatCurrency(mandate.budget) || mandate.budget}
+                    sub={mandate.budgetTolerance ? `± ${formatCurrency(mandate.budgetTolerance) || mandate.budgetTolerance}` : undefined}
                   />
                 )}
               </div>
@@ -501,13 +541,19 @@ function EditDialog({ open, onOpenChange, form, setForm, onSave, isPending }: {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget</label>
-              <Input placeholder="$50,000" value={form.budget}
-                onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
+              <CurrencyInput
+                placeholder="50000"
+                value={form.budget}
+                onChange={(val) => setForm((f) => ({ ...f, budget: val }))}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget Tolerance</label>
-              <Input placeholder="$5,000" value={form.budgetTolerance}
-                onChange={(e) => setForm((f) => ({ ...f, budgetTolerance: e.target.value }))} />
+              <CurrencyInput
+                placeholder="5000"
+                value={form.budgetTolerance}
+                onChange={(val) => setForm((f) => ({ ...f, budgetTolerance: val }))}
+              />
             </div>
           </div>
 
