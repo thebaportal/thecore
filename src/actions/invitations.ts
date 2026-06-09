@@ -91,6 +91,7 @@ export async function inviteToProject(
   projectId: string,
   invitees: ProjectInviteeInput[],
   role: "org:member" | "org:admin",
+  overrideConflicts: string[] = [],
 ): Promise<ProjectInviteResult[]> {
   const { org, project } = await assertInstructorOnProject(projectId);
 
@@ -119,8 +120,8 @@ export async function inviteToProject(
 
       if (existingUser?.memberships.length) {
         const orgRole = existingUser.memberships[0]?.role;
-        // Members are limited to one project — block the add if they're already in one
-        if (orgRole === "MEMBER") {
+        // Warn if already in another project — unless the caller explicitly overrides
+        if (orgRole === "MEMBER" && !overrideConflicts.includes(email)) {
           const existingProject = await db.projectMember.findFirst({
             where: { userId: existingUser.id, project: { organizationId: org.id }, NOT: { projectId } },
             select: { project: { select: { name: true } } },

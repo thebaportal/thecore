@@ -231,7 +231,7 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
             {/* Description */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">
-                Description <span className="text-muted-foreground font-normal">(optional)</span>
+                Description <span className="text-muted-foreground font-normal">(optional — saved to mandate)</span>
               </label>
               <Textarea
                 {...form.register("description")}
@@ -294,7 +294,7 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">
-                  Target date <span className="text-muted-foreground font-normal">(optional)</span>
+                  End date <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
                 <Input {...form.register("targetDate")} type="date" className="h-9 text-sm" />
               </div>

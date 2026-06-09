@@ -226,6 +226,18 @@ export async function createProject(input: CreateProjectInput) {
       }
     }
 
+    // Seed the mandate with whatever was entered in the creation dialog
+    if (projectFields.description || projectFields.startDate || projectFields.targetDate) {
+      await tx.projectMandate.create({
+        data: {
+          projectId: proj.id,
+          projectDescription: projectFields.description ?? null,
+          startDate: projectFields.startDate ?? null,
+          endDate: projectFields.targetDate ?? null,
+        },
+      });
+    }
+
     // Auto-create a project group chat so the team has a space from day one
     await tx.ping.create({
       data: {

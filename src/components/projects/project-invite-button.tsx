@@ -48,6 +48,8 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
   const [results, setResults] = useState<ProjectInviteResult[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [overriding, setOverriding] = useState<Set<string>>(new Set());
+  const [overridden, setOverridden] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   function handleOpen() {
@@ -57,6 +59,8 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
     setRows([newRow()]);
     setResults([]);
     setError(null);
+    setOverriding(new Set());
+    setOverridden(new Set());
   }
 
   function handleClose() {
@@ -89,6 +93,22 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
         setStep("done");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
+      }
+    });
+  }
+
+  function handleAddAnyway(email: string) {
+    if (!role) return;
+    const invitee = validRows.find((r) => r.email.trim().toLowerCase() === email);
+    if (!invitee) return;
+    setOverriding((prev) => new Set(prev).add(email));
+    startTransition(async () => {
+      try {
+        await inviteToProject(projectId, [invitee], role, [email]);
+        setOverridden((prev) => new Set(prev).add(email));
+        router.refresh();
+      } finally {
+        setOverriding((prev) => { const n = new Set(prev); n.delete(email); return n; });
       }
     });
   }
@@ -256,22 +276,39 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
 
               <div className="space-y-2 py-2 max-h-64 overflow-y-auto">
                 {results.map((r) => {
-                  const cfg = STATUS_CONFIG[r.status] ?? STATUS_CONFIG["error"]!;
+                  const isConflict = r.status === "already_in_project";
+                  const didOverride = overridden.has(r.email);
+                  const isOverriding = overriding.has(r.email);
+                  const cfg = didOverride
+                    ? STATUS_CONFIG["added"]!
+                    : STATUS_CONFIG[r.status] ?? STATUS_CONFIG["error"]!;
                   return (
-                    <div key={r.email} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-muted/40">
+                    <div key={r.email} className="flex items-start gap-3 px-4 py-2.5 rounded-xl bg-muted/40">
                       {cfg.icon}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground truncate">{r.email}</p>
                         {r.status === "error" && r.error && (
                           <p className="text-xs text-destructive mt-0.5">{r.error}</p>
                         )}
-                        {r.status === "already_in_project" && r.error && (
-                          <p className="text-xs text-destructive mt-0.5">Already in: {r.error}</p>
+                        {isConflict && !didOverride && r.error && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Currently in: <span className="font-medium">{r.error}</span>
+                          </p>
                         )}
                       </div>
-                      <span className={cn("text-xs font-medium shrink-0", cfg.cls)}>
-                        {cfg.label}
-                      </span>
+                      {isConflict && !didOverride ? (
+                        <button
+                          onClick={() => handleAddAnyway(r.email)}
+                          disabled={isOverriding || isPending}
+                          className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                        >
+                          {isOverriding ? <Loader2 className="w-3 h-3 animate-spin" /> : "Add anyway"}
+                        </button>
+                      ) : (
+                        <span className={cn("text-xs font-medium shrink-0", cfg.cls)}>
+                          {cfg.label}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
