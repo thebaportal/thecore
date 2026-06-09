@@ -48,8 +48,9 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
   const [results, setResults] = useState<ProjectInviteResult[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [overriding, setOverriding] = useState<Set<string>>(new Set());
-  const [overridden, setOverridden] = useState<Set<string>>(new Set());
+  const [assigningBoth, setAssigningBoth] = useState<Set<string>>(new Set());
+  const [movingStudent, setMovingStudent] = useState<Set<string>>(new Set());
+  const [resolved, setResolved] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   function handleOpen() {
@@ -59,8 +60,9 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
     setRows([newRow()]);
     setResults([]);
     setError(null);
-    setOverriding(new Set());
-    setOverridden(new Set());
+    setAssigningBoth(new Set());
+    setMovingStudent(new Set());
+    setResolved(new Set());
   }
 
   function handleClose() {
@@ -97,18 +99,34 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
     });
   }
 
-  function handleAddAnyway(email: string) {
+  function handleAssignBoth(email: string) {
     if (!role) return;
     const invitee = validRows.find((r) => r.email.trim().toLowerCase() === email);
     if (!invitee) return;
-    setOverriding((prev) => new Set(prev).add(email));
+    setAssigningBoth((prev) => new Set(prev).add(email));
     startTransition(async () => {
       try {
-        await inviteToProject(projectId, [invitee], role, [email]);
-        setOverridden((prev) => new Set(prev).add(email));
+        await inviteToProject(projectId, [invitee], role, [email], []);
+        setResolved((prev) => new Set(prev).add(email));
         router.refresh();
       } finally {
-        setOverriding((prev) => { const n = new Set(prev); n.delete(email); return n; });
+        setAssigningBoth((prev) => { const n = new Set(prev); n.delete(email); return n; });
+      }
+    });
+  }
+
+  function handleMoveStudent(email: string) {
+    if (!role) return;
+    const invitee = validRows.find((r) => r.email.trim().toLowerCase() === email);
+    if (!invitee) return;
+    setMovingStudent((prev) => new Set(prev).add(email));
+    startTransition(async () => {
+      try {
+        await inviteToProject(projectId, [invitee], role, [], [email]);
+        setResolved((prev) => new Set(prev).add(email));
+        router.refresh();
+      } finally {
+        setMovingStudent((prev) => { const n = new Set(prev); n.delete(email); return n; });
       }
     });
   }
@@ -116,6 +134,7 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
   const selectedOption = ROLE_OPTIONS.find((r) => r.value === role);
   const successCount = results.filter((r) => r.status === "invited" || r.status === "added").length;
   const errorCount = results.filter((r) => r.status === "error").length;
+  const conflictCount = results.filter((r) => r.status === "already_in_project" && !resolved.has(r.email)).length;
 
   return (
     <>
@@ -266,22 +285,62 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
             <>
               <DialogHeader>
                 <DialogTitle className="text-lg">
-                  {errorCount === 0 ? "Done!" : "Invitations processed"}
+                  {conflictCount > 0 ? "Action required" : errorCount === 0 ? "Done!" : "Invitations processed"}
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {successCount > 0 && `${successCount} ${successCount > 1 ? "people" : "person"} added or invited.`}
+                  {conflictCount > 0 && ` ${conflictCount} ${conflictCount > 1 ? "students need" : "student needs"} a decision.`}
                   {errorCount > 0 && ` ${errorCount} failed.`}
                 </p>
               </DialogHeader>
 
-              <div className="space-y-2 py-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 py-2 max-h-72 overflow-y-auto">
                 {results.map((r) => {
-                  const isConflict = r.status === "already_in_project";
-                  const didOverride = overridden.has(r.email);
-                  const isOverriding = overriding.has(r.email);
-                  const cfg = didOverride
+                  const isConflict = r.status === "already_in_project" && !resolved.has(r.email);
+                  const isResolved = resolved.has(r.email);
+                  const cfg = isResolved
                     ? STATUS_CONFIG["added"]!
                     : STATUS_CONFIG[r.status] ?? STATUS_CONFIG["error"]!;
+
+                  if (isConflict) {
+                    const isAssigning = assigningBoth.has(r.email);
+                    const isMoving = movingStudent.has(r.email);
+                    const anyPending = isAssigning || isMoving;
+                    return (
+                      <div key={r.email} className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{r.email}</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                              This student is already assigned to{" "}
+                              <span className="font-semibold text-foreground">{r.error}</span>.
+                              What would you like to do?
+                            </p>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              <button
+                                onClick={() => handleMoveStudent(r.email)}
+                                disabled={anyPending}
+                                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                              >
+                                {isMoving && <Loader2 className="w-3 h-3 animate-spin" />}
+                                Move to This Project
+                              </button>
+                              <button
+                                onClick={() => handleAssignBoth(r.email)}
+                                disabled={anyPending}
+                                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                              >
+                                {isAssigning && <Loader2 className="w-3 h-3 animate-spin" />}
+                                Assign to Both Projects
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={r.email} className="flex items-start gap-3 px-4 py-2.5 rounded-xl bg-muted/40">
                       {cfg.icon}
@@ -290,25 +349,10 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
                         {r.status === "error" && r.error && (
                           <p className="text-xs text-destructive mt-0.5">{r.error}</p>
                         )}
-                        {isConflict && !didOverride && r.error && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Currently in: <span className="font-medium">{r.error}</span>
-                          </p>
-                        )}
                       </div>
-                      {isConflict && !didOverride ? (
-                        <button
-                          onClick={() => handleAddAnyway(r.email)}
-                          disabled={isOverriding || isPending}
-                          className="shrink-0 text-xs font-medium px-2.5 py-1 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                        >
-                          {isOverriding ? <Loader2 className="w-3 h-3 animate-spin" /> : "Add anyway"}
-                        </button>
-                      ) : (
-                        <span className={cn("text-xs font-medium shrink-0", cfg.cls)}>
-                          {cfg.label}
-                        </span>
-                      )}
+                      <span className={cn("text-xs font-medium shrink-0", cfg.cls)}>
+                        {cfg.label}
+                      </span>
                     </div>
                   );
                 })}

@@ -99,11 +99,13 @@ export function Sidebar({
           <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
       ) : orgLogoUrl ? (
-        <img
-          src={orgLogoUrl}
-          alt={orgName}
-          className="h-[50px] w-auto max-w-full object-contain"
-        />
+        <div className="bg-white rounded-xl px-3 py-2 w-full shadow-sm">
+          <img
+            src={orgLogoUrl}
+            alt={orgName}
+            className="h-10 w-auto max-w-full object-contain"
+          />
+        </div>
       ) : (
         <>
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">

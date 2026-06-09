@@ -92,6 +92,7 @@ export async function inviteToProject(
   invitees: ProjectInviteeInput[],
   role: "org:member" | "org:admin",
   overrideConflicts: string[] = [],
+  moveConflicts: string[] = [],
 ): Promise<ProjectInviteResult[]> {
   const { org, project } = await assertInstructorOnProject(projectId);
 
@@ -121,7 +122,7 @@ export async function inviteToProject(
       if (existingUser?.memberships.length) {
         const orgRole = existingUser.memberships[0]?.role;
         // Warn if already in another project — unless the caller explicitly overrides
-        if (orgRole === "MEMBER" && !overrideConflicts.includes(email)) {
+        if (orgRole === "MEMBER" && !overrideConflicts.includes(email) && !moveConflicts.includes(email)) {
           const existingProject = await db.projectMember.findFirst({
             where: { userId: existingUser.id, project: { organizationId: org.id }, NOT: { projectId } },
             select: { project: { select: { name: true } } },
@@ -130,6 +131,12 @@ export async function inviteToProject(
             results.push({ email, status: "already_in_project", error: existingProject.project.name });
             continue;
           }
+        }
+        // Move: remove from all other projects in this org first
+        if (moveConflicts.includes(email)) {
+          await db.projectMember.deleteMany({
+            where: { userId: existingUser.id, project: { organizationId: org.id }, NOT: { projectId } },
+          });
         }
         await db.projectMember.createMany({
           data: [{ projectId, userId: existingUser.id }],
