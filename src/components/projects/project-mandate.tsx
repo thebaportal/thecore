@@ -1,12 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Plus, Loader2 } from "lucide-react";
+import {
+  Pencil, Plus, Loader2,
+  FileText, List, ClipboardList,
+  Clock, CalendarDays, DollarSign, ChevronRight,
+  CheckCircle2, Circle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { upsertProjectMandate, type MandateInput } from "@/actions/mandate";
+import { cn } from "@/lib/utils";
 
 type Mandate = {
   projectDescription?: string | null;
@@ -21,7 +27,6 @@ type Mandate = {
   nextSteps?: string | null;
 };
 
-// Strip leading bullet/dash/number prefixes so auto-bullets don't double-render
 function parseList(text: string | null | undefined): string[] {
   if (!text?.trim()) return [];
   return text
@@ -37,100 +42,124 @@ function fmtDate(d: Date | string | null | undefined) {
   });
 }
 
-// Textarea that auto-continues bullet points on Enter
-function BulletTextarea({
-  value, onChange, rows, placeholder, autoFocus,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  rows?: number;
-  placeholder?: string;
-  autoFocus?: boolean;
+function BulletTextarea({ value, onChange, rows, placeholder, autoFocus }: {
+  value: string; onChange: (val: string) => void;
+  rows?: number; placeholder?: string; autoFocus?: boolean;
 }) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     const el = e.currentTarget;
     const pos = el.selectionStart;
     const val = el.value;
-
     if (e.key !== "Enter") return;
     e.preventDefault();
-
     const before = val.slice(0, pos);
     const after = val.slice(pos);
     const currentLine = before.split("\n").pop() ?? "";
-
-    // If the current line is just a bullet with no content, remove it and break out
     if (/^•\s*$/.test(currentLine.trim()) || currentLine.trim() === "") {
       const stripped = before.replace(/\n?•\s*$/, "");
-      const newVal = stripped + "\n" + after;
-      onChange(newVal);
+      onChange(stripped + "\n" + after);
       const newPos = stripped.length + 1;
       requestAnimationFrame(() => el.setSelectionRange(newPos, newPos));
       return;
     }
-
     const insert = "\n• ";
     onChange(before + insert + after);
     requestAnimationFrame(() => el.setSelectionRange(pos + insert.length, pos + insert.length));
   }
-
   function handleFocus(e: React.FocusEvent<HTMLTextAreaElement>) {
     if (!e.target.value.trim()) {
       onChange("• ");
       requestAnimationFrame(() => e.target.setSelectionRange(2, 2));
     }
   }
-
   return (
     <Textarea
-      rows={rows}
-      value={value}
+      rows={rows} value={value}
       onChange={(e) => onChange(e.target.value)}
-      onKeyDown={handleKeyDown}
-      onFocus={handleFocus}
-      placeholder={placeholder}
-      autoFocus={autoFocus}
+      onKeyDown={handleKeyDown} onFocus={handleFocus}
+      placeholder={placeholder} autoFocus={autoFocus}
       className="text-sm"
     />
   );
 }
 
-// ── Consistent list rendering ─────────────────────────────────────────────────
+// ── Section card ──────────────────────────────────────────────────────────────
 
-function BulletList({ items }: { items: string[] }) {
+function SectionCard({
+  icon: Icon, title, accent = "blue", onEdit, isInstructor, children, empty,
+}: {
+  icon: React.ElementType;
+  title: string;
+  accent?: "blue" | "amber" | "emerald" | "violet";
+  onEdit?: () => void;
+  isInstructor?: boolean;
+  children: React.ReactNode;
+  empty?: boolean;
+}) {
+  const colors = {
+    blue:    { bg: "bg-primary/10",   icon: "text-primary" },
+    amber:   { bg: "bg-amber-100",    icon: "text-amber-600" },
+    emerald: { bg: "bg-emerald-100",  icon: "text-emerald-600" },
+    violet:  { bg: "bg-violet-100",   icon: "text-violet-600" },
+  }[accent];
+
   return (
-    <ul className="space-y-2.5">
-      {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-3 text-sm text-foreground leading-relaxed">
-          <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
-          {item}
-        </li>
-      ))}
-    </ul>
+    <div className={cn("rounded-xl border border-border bg-card overflow-hidden", empty && "border-dashed")}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+        <div className="flex items-center gap-2.5">
+          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", colors.bg)}>
+            <Icon className={cn("w-4 h-4", colors.icon)} />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        </div>
+        {isInstructor && onEdit && (
+          <button
+            onClick={onEdit}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
   );
 }
 
-function NumberedList({ items }: { items: string[] }) {
+// ── Two-column bullet grid ────────────────────────────────────────────────────
+
+function BulletGrid({ items }: { items: string[] }) {
   return (
-    <ol className="space-y-2.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
       {items.map((item, i) => (
-        <li key={i} className="flex items-baseline gap-3 text-sm text-foreground leading-relaxed">
-          <span className="text-sm font-semibold text-muted-foreground/25 tabular-nums shrink-0 w-5 text-right">
+        <div key={i} className="flex items-start gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-[7px] shrink-0" />
+          <span className="text-sm text-foreground leading-relaxed">{item}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NumberedGrid({ items }: { items: string[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+      {items.map((item, i) => (
+        <div key={i} className="flex items-start gap-2.5">
+          <span className="text-xs font-bold text-primary/60 tabular-nums mt-0.5 shrink-0 w-4">
             {i + 1}.
           </span>
-          {item}
-        </li>
+          <span className="text-sm text-foreground leading-relaxed">{item}</span>
+        </div>
       ))}
-    </ol>
+    </div>
   );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ProjectMandate({
-  projectId,
-  mandate,
-  isInstructor,
+  projectId, mandate, isInstructor,
 }: {
   projectId: string;
   mandate: Mandate | null;
@@ -201,267 +230,325 @@ export function ProjectMandate({
     mandate.timelineWeeks || mandate.startDate || mandate.endDate || mandate.budget
   );
 
+  // ── Empty state ────────────────────────────────────────────────────────────
+
+  if (!hasContent) {
+    return (
+      <>
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-14 flex flex-col items-center gap-3 text-center">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <FileText className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">No mandate yet</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              {isInstructor
+                ? "Add the project goal, scope, deliverables, and timeline so students know exactly what to build."
+                : "The project mandate hasn't been added yet. Check back soon."}
+            </p>
+          </div>
+          {isInstructor && (
+            <Button size="sm" onClick={() => setOpen(true)} className="mt-1">
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Add mandate
+            </Button>
+          )}
+        </div>
+
+        <EditDialog
+          open={open} onOpenChange={setOpen}
+          form={form} setForm={setForm}
+          onSave={handleSave} isPending={isPending}
+        />
+      </>
+    );
+  }
+
+  // ── Populated view ─────────────────────────────────────────────────────────
+
   return (
     <>
-      {!hasContent ? (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground/40 italic">
-            {isInstructor ? "No mandate yet." : "The project mandate hasn't been added yet."}
-          </p>
-          {isInstructor && (
-            <button onClick={() => setOpen(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-              <Plus className="h-3 w-3" /> Add mandate
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-5 items-start">
+
+        {/* ── Left: content sections ── */}
+        <div className="space-y-4">
+
+          {mandate.projectDescription && (
+            <SectionCard icon={FileText} title="Project Goal" isInstructor={isInstructor} onEdit={() => setOpen(true)}>
+              <p className="text-sm text-foreground leading-relaxed">{mandate.projectDescription}</p>
+            </SectionCard>
+          )}
+
+          {scopeItems.length > 0 && (
+            <SectionCard icon={List} title="Scope" isInstructor={isInstructor} onEdit={() => setOpen(true)}>
+              <BulletGrid items={scopeItems} />
+            </SectionCard>
+          )}
+
+          {deliverableItems.length > 0 && (
+            <SectionCard icon={ClipboardList} title="Expected Deliverables" isInstructor={isInstructor} onEdit={() => setOpen(true)}>
+              <NumberedGrid items={deliverableItems} />
+            </SectionCard>
+          )}
+
+          {/* Instructor prompt when some sections are empty */}
+          {isInstructor && (!mandate.projectDescription || scopeItems.length === 0 || deliverableItems.length === 0) && (
+            <button
+              onClick={() => setOpen(true)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors group"
+            >
+              <span className="flex items-center gap-2">
+                <Plus className="w-3.5 h-3.5" />
+                {!mandate.projectDescription ? "Add project goal, scope and deliverables" : "Fill in missing sections"}
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
           )}
         </div>
-      ) : (
-        <div className="space-y-10">
 
-          {/* ── Top row: main content + sidebar ── */}
-          <div className="flex gap-8 items-start">
+        {/* ── Right: stats + next steps ── */}
+        <div className="space-y-4">
 
-            {/* Left: Goal + Scope + Deliverables */}
-            <div className="flex-1 min-w-0 space-y-8">
-
-              {mandate.projectDescription && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35">
-                      Project Goal
-                    </p>
-                    {isInstructor && (
-                      <button
-                        onClick={() => setOpen(true)}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                      >
-                        <Pencil className="h-3 w-3" /> Edit
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-base text-foreground leading-loose">{mandate.projectDescription}</p>
-                </div>
-              )}
-
-              {scopeItems.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35 mb-4">
-                    Scope
-                  </p>
-                  <BulletList items={scopeItems} />
-                </div>
-              )}
-
-              {deliverableItems.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35 mb-4">
-                    Expected Deliverables
-                  </p>
-                  <NumberedList items={deliverableItems} />
-                </div>
-              )}
-
-            </div>
-
-            {/* Right: Period + Next Steps */}
-            {(hasStats || nextStepItems.length > 0 || isInstructor) && (
-              <div className="w-[280px] shrink-0 space-y-4">
-
-                {hasStats && (
-                  <div className="rounded-xl border border-border bg-card p-5 space-y-5">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35">
-                      Period
-                    </p>
-                    <div className="space-y-4">
-                      {mandate.timelineWeeks && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1">Duration</p>
-                          <p className="text-2xl font-bold text-foreground tabular-nums leading-none">
-                            {mandate.timelineWeeks}
-                            <span className="text-sm font-normal text-muted-foreground ml-1">w</span>
-                          </p>
-                          {mandate.timelineTolerance && (
-                            <p className="text-xs text-muted-foreground mt-0.5">±{mandate.timelineTolerance}</p>
-                          )}
-                        </div>
-                      )}
-                      {mandate.startDate && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1">Start</p>
-                          <p className="text-sm font-semibold text-foreground">{fmtDate(mandate.startDate)}</p>
-                        </div>
-                      )}
-                      {mandate.endDate && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1">End</p>
-                          <p className="text-sm font-semibold text-foreground">{fmtDate(mandate.endDate)}</p>
-                        </div>
-                      )}
-                      {mandate.budget && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-1">Budget</p>
-                          <p className="text-2xl font-bold text-foreground tabular-nums leading-none">{mandate.budget}</p>
-                          {mandate.budgetTolerance && (
-                            <p className="text-xs text-muted-foreground mt-0.5">±{mandate.budgetTolerance}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Next Steps */}
-                {(nextStepItems.length > 0 || isInstructor) && (
-                  <div className="rounded-xl border border-border bg-card overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/50">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/35">
-                        Next Steps
-                      </p>
-                      {isInstructor && !editingNextSteps && (
-                        <button
-                          onClick={() => { setNextStepsValue(mandate?.nextSteps ?? ""); setEditingNextSteps(true); }}
-                          className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="px-5 py-4">
-                      {editingNextSteps ? (
-                        <div className="space-y-3">
-                          <BulletTextarea
-                            rows={5}
-                            value={nextStepsValue}
-                            onChange={setNextStepsValue}
-                            placeholder="• Review project mandate&#10;• Join project chat&#10;• Complete first deliverable"
-                            autoFocus
-                          />
-                          <p className="text-xs text-muted-foreground">Press Enter to add items automatically</p>
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSaveNextSteps} disabled={isSavingNextSteps}>
-                              {isSavingNextSteps && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
-                              Save
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => {
-                              setNextStepsValue(mandate?.nextSteps ?? "");
-                              setEditingNextSteps(false);
-                            }}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : nextStepItems.length > 0 ? (
-                        <NumberedList items={nextStepItems} />
-                      ) : (
-                        <p className="text-xs text-muted-foreground/40 italic">None yet.</p>
-                      )}
-                    </div>
-                  </div>
+          {/* Project Overview */}
+          {hasStats && (
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+                <h3 className="text-sm font-semibold text-foreground">Project Overview</h3>
+                {isInstructor && (
+                  <button onClick={() => setOpen(true)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
-            )}
+              <div className="divide-y divide-border/50">
+                {mandate.timelineWeeks && (
+                  <StatRow
+                    icon={Clock} iconBg="bg-amber-50" iconColor="text-amber-600"
+                    label="Duration"
+                    value={`${mandate.timelineWeeks} week${mandate.timelineWeeks !== 1 ? "s" : ""}`}
+                    sub={mandate.timelineTolerance ? `± ${mandate.timelineTolerance}` : undefined}
+                  />
+                )}
+                {mandate.startDate && (
+                  <StatRow
+                    icon={CalendarDays} iconBg="bg-blue-50" iconColor="text-blue-600"
+                    label="Start Date" value={fmtDate(mandate.startDate)!}
+                  />
+                )}
+                {mandate.endDate && (
+                  <StatRow
+                    icon={CalendarDays} iconBg="bg-blue-50" iconColor="text-blue-600"
+                    label="End Date" value={fmtDate(mandate.endDate)!}
+                  />
+                )}
+                {mandate.budget && (
+                  <StatRow
+                    icon={DollarSign} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+                    label="Budget" value={mandate.budget}
+                    sub={mandate.budgetTolerance ? `± ${mandate.budgetTolerance}` : undefined}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Next Steps */}
+          {(nextStepItems.length > 0 || isInstructor) && (
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+                <h3 className="text-sm font-semibold text-foreground">Next Steps</h3>
+                {isInstructor && !editingNextSteps && (
+                  <button
+                    onClick={() => { setNextStepsValue(mandate?.nextSteps ?? ""); setEditingNextSteps(true); }}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="px-5 py-4">
+                {editingNextSteps ? (
+                  <div className="space-y-3">
+                    <BulletTextarea
+                      rows={5} value={nextStepsValue}
+                      onChange={setNextStepsValue} autoFocus
+                      placeholder="• Review project mandate&#10;• Join project chat&#10;• Complete first deliverable"
+                    />
+                    <p className="text-xs text-muted-foreground">Press Enter to add items</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveNextSteps} disabled={isSavingNextSteps}>
+                        {isSavingNextSteps && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setNextStepsValue(mandate?.nextSteps ?? "");
+                        setEditingNextSteps(false);
+                      }}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : nextStepItems.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {nextStepItems.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <Circle className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0 mt-0.5" />
+                        <span className="text-sm text-foreground leading-snug">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setNextStepsValue("• "); setEditingNextSteps(true); }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Add next steps
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <EditDialog
+        open={open} onOpenChange={setOpen}
+        form={form} setForm={setForm}
+        onSave={handleSave} isPending={isPending}
+      />
+    </>
+  );
+}
+
+// ── Stat row ──────────────────────────────────────────────────────────────────
+
+function StatRow({ icon: Icon, iconBg, iconColor, label, value, sub }: {
+  icon: React.ElementType;
+  iconBg: string; iconColor: string;
+  label: string; value: string; sub?: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-3">
+      <div className={cn("w-8 h-8 rounded-lg border flex items-center justify-center shrink-0", iconBg,
+        iconBg === "bg-amber-50" ? "border-amber-100" :
+        iconBg === "bg-blue-50"  ? "border-blue-100"  :
+        iconBg === "bg-emerald-50" ? "border-emerald-100" : "border-border"
+      )}>
+        <Icon className={cn("w-3.5 h-3.5", iconColor)} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">{label}</p>
+        <p className="text-sm font-semibold text-foreground mt-0.5">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ── Edit dialog (unchanged logic) ─────────────────────────────────────────────
+
+type FormState = {
+  projectDescription: string; timelineWeeks: string; timelineTolerance: string;
+  startDate: string; endDate: string; budget: string; budgetTolerance: string;
+  scope: string; keyDeliverables: string; nextSteps: string;
+};
+
+function EditDialog({ open, onOpenChange, form, setForm, onSave, isPending }: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>;
+  onSave: () => void; isPending: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
+        <DialogHeader>
+          <DialogTitle>Project Mandate</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Project Goal</label>
+            <Input
+              placeholder="e.g. Build a web application for a fine dining restaurant"
+              value={form.projectDescription}
+              onChange={(e) => setForm((f) => ({ ...f, projectDescription: e.target.value }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Duration (weeks)</label>
+              <Input type="number" placeholder="8" value={form.timelineWeeks}
+                onChange={(e) => setForm((f) => ({ ...f, timelineWeeks: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tolerance</label>
+              <Input placeholder="1 week" value={form.timelineTolerance}
+                onChange={(e) => setForm((f) => ({ ...f, timelineTolerance: e.target.value }))} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Start Date</label>
+              <Input type="date" value={form.startDate}
+                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">End Date</label>
+              <Input type="date" value={form.endDate}
+                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget</label>
+              <Input placeholder="$50,000" value={form.budget}
+                onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget Tolerance</label>
+              <Input placeholder="$5,000" value={form.budgetTolerance}
+                onChange={(e) => setForm((f) => ({ ...f, budgetTolerance: e.target.value }))} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scope</label>
+            <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
+            <BulletTextarea rows={4}
+              placeholder={"• Online reservation system\n• Event booking\n• Chef profiles"}
+              value={form.scope}
+              onChange={(val) => setForm((f) => ({ ...f, scope: val }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expected Key Deliverables</label>
+            <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
+            <BulletTextarea rows={6}
+              placeholder={"• High Level Project Plan\n• Project Charter\n• Use Case Document\n• BRD\n• Testing Documents"}
+              value={form.keyDeliverables}
+              onChange={(val) => setForm((f) => ({ ...f, keyDeliverables: val }))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Steps</label>
+            <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
+            <BulletTextarea rows={3}
+              placeholder={"• Review the project mandate\n• Join the project chat\n• Attend the kickoff session"}
+              value={form.nextSteps}
+              onChange={(val) => setForm((f) => ({ ...f, nextSteps: val }))}
+            />
           </div>
         </div>
-      )}
 
-      {/* ── Edit dialog ── */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
-          <DialogHeader>
-            <DialogTitle>Project Mandate</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-1">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Project Goal</label>
-              <Input
-                placeholder="e.g. Build a web application for a fine dining restaurant"
-                value={form.projectDescription}
-                onChange={(e) => setForm((f) => ({ ...f, projectDescription: e.target.value }))}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Duration (weeks)</label>
-                <Input type="number" placeholder="8" value={form.timelineWeeks}
-                  onChange={(e) => setForm((f) => ({ ...f, timelineWeeks: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tolerance</label>
-                <Input placeholder="1 week" value={form.timelineTolerance}
-                  onChange={(e) => setForm((f) => ({ ...f, timelineTolerance: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Start Date</label>
-                <Input type="date" value={form.startDate}
-                  onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">End Date</label>
-                <Input type="date" value={form.endDate}
-                  onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget</label>
-                <Input placeholder="$50,000" value={form.budget}
-                  onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Budget Tolerance</label>
-                <Input placeholder="$5,000" value={form.budgetTolerance}
-                  onChange={(e) => setForm((f) => ({ ...f, budgetTolerance: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scope</label>
-              <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
-              <BulletTextarea
-                rows={4}
-                placeholder={"• Online reservation system&#10;• Event booking&#10;• Chef profiles"}
-                value={form.scope}
-                onChange={(val) => setForm((f) => ({ ...f, scope: val }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expected Key Deliverables</label>
-              <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
-              <BulletTextarea
-                rows={6}
-                placeholder={"• High Level Project Plan&#10;• Project Charter&#10;• Use Case Document&#10;• User Story Backlog&#10;• BRD&#10;• Testing Documents"}
-                value={form.keyDeliverables}
-                onChange={(val) => setForm((f) => ({ ...f, keyDeliverables: val }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Steps</label>
-              <p className="text-xs text-muted-foreground">Press Enter to add items — bullets are automatic</p>
-              <BulletTextarea
-                rows={3}
-                placeholder={"• Review the project mandate&#10;• Join the project chat&#10;• Attend the kickoff session"}
-                value={form.nextSteps}
-                onChange={(val) => setForm((f) => ({ ...f, nextSteps: val }))}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
-            <Button onClick={handleSave} disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Mandate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
+          <Button onClick={onSave} disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Mandate
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
