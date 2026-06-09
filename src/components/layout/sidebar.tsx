@@ -105,7 +105,8 @@ export function Sidebar({
         <img
           src={orgLogoUrl}
           alt={orgName}
-          className="flex-1 min-w-0 h-9 w-auto max-w-[160px] object-contain brightness-0 invert"
+          className="flex-1 min-w-0 h-9 w-auto max-w-[160px] object-contain"
+          style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.35)) drop-shadow(0 0 2px rgba(255,255,255,0.5))" }}
         />
       ) : (
         <div className="flex items-center gap-2 flex-1 min-w-0">
