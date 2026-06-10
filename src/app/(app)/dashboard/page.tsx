@@ -22,6 +22,7 @@ import { Greeting } from "@/components/dashboard/greeting";
 import { DashboardDate } from "@/components/dashboard/dashboard-date";
 import { DeliverableTracker } from "@/components/dashboard/deliverable-tracker";
 import { SessionManager } from "@/components/dashboard/session-manager";
+import { AdminQuickActions } from "@/components/dashboard/admin-quick-actions";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -404,45 +405,12 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
 
         {/* Upcoming Sessions */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-sm font-semibold text-foreground">Upcoming Sessions</span>
-            </div>
-            <Link href={`/projects/${project.id}`} className="text-xs text-muted-foreground hover:text-primary transition-colors">
-              View all
-            </Link>
+          <div className="flex items-center px-4 py-3 border-b border-border/50 gap-2">
+            <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">Upcoming Sessions</span>
           </div>
-          <div className="px-4 py-3 space-y-3">
-            {upcomingSessions.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No sessions scheduled.</p>
-            ) : (
-              upcomingSessions.slice(0, 3).map((s, i) => (
-                <div key={s.id} className="flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold"
-                    style={{
-                      backgroundColor: i % 2 === 0 ? `${NAVY}18` : `${GOLD}25`,
-                      color: i % 2 === 0 ? NAVY : "#D97706",
-                    }}
-                  >
-                    {format(new Date(s.datetime), "d")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {format(new Date(s.datetime), "MMM d · h:mm a")}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-            <Link
-              href={`/projects/${project.id}`}
-              className="flex items-center gap-1.5 pt-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              <CalendarDays className="w-3 h-3" /> View Calendar
-            </Link>
+          <div className="px-4 py-3">
+            <SessionManager sessions={upcomingSessions} projectId={project.id} />
           </div>
         </div>
 
@@ -452,25 +420,7 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
             <Zap className="w-3.5 h-3.5 text-muted-foreground mr-2" />
             <span className="text-sm font-semibold text-foreground">Quick Actions</span>
           </div>
-          <div className="px-4 py-1 divide-y divide-border/40">
-            {([
-              { Icon: Plus,        label: "New Project",          href: "/projects" },
-              { Icon: UserPlus,    label: "Invite Student",        href: "/team" },
-              { Icon: CalendarDays, label: "Schedule Session",    href: `/projects/${project.id}` },
-              { Icon: Megaphone,   label: "Create Announcement",  href: "/announcements" },
-              { Icon: Upload,      label: "Upload Resource",       href: "/library" },
-            ] as const).map(({ Icon, label, href }) => (
-              <Link
-                key={label}
-                href={href}
-                className="flex items-center gap-3 py-2.5 text-sm text-foreground hover:text-primary transition-colors group"
-              >
-                <Icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                {label}
-                <ArrowRight className="w-3 h-3 ml-auto text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
-              </Link>
-            ))}
-          </div>
+          <AdminQuickActions projectId={project.id} />
         </div>
 
         {/* Recent Activity */}

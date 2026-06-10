@@ -102,12 +102,14 @@ export function Sidebar({
           <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
       ) : orgLogoUrl ? (
-        <img
-          src={orgLogoUrl}
-          alt={orgName}
-          className="flex-1 min-w-0 h-9 w-auto max-w-[160px] object-contain"
-          style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.35)) drop-shadow(0 0 2px rgba(255,255,255,0.5))" }}
-        />
+        <div className="flex-1 min-w-0 flex items-center">
+          <img
+            src={orgLogoUrl}
+            alt={orgName}
+            className="h-9 w-auto max-w-[150px] object-contain"
+            style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.35)) drop-shadow(0 0 2px rgba(255,255,255,0.5))" }}
+          />
+        </div>
       ) : (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">

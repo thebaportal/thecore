@@ -46,21 +46,38 @@ export async function syncCurrentIdentity() {
   }
   resolvedName = resolvedName || "Unknown";
 
-  const user = await db.user.upsert({
-    where: { clerkUserId: userId },
-    create: {
-      clerkUserId: userId,
-      email,
-      name: resolvedName,
-      avatarUrl: clerkUser.imageUrl ?? null,
-    },
-    update: {
-      email,
-      // Never overwrite a real name with "Unknown"
-      name: resolvedName !== "Unknown" ? resolvedName : undefined,
-      avatarUrl: clerkUser.imageUrl ?? null,
-    },
-  });
+  // A user with this email may already exist from a Basecamp import or placeholder
+  // record — clerkUserId would be null. If we upsert by clerkUserId we'd try to
+  // CREATE a second row and hit the unique-email constraint. Claim the existing
+  // row instead by linking their Clerk ID to it.
+  const existingByEmail = email
+    ? await db.user.findUnique({ where: { email }, select: { id: true, clerkUserId: true } })
+    : null;
+
+  const user = existingByEmail && existingByEmail.clerkUserId !== userId
+    ? await db.user.update({
+        where: { id: existingByEmail.id },
+        data: {
+          clerkUserId: userId,
+          name: resolvedName !== "Unknown" ? resolvedName : undefined,
+          avatarUrl: clerkUser.imageUrl ?? null,
+          isPlaceholder: false,
+        },
+      })
+    : await db.user.upsert({
+        where: { clerkUserId: userId },
+        create: {
+          clerkUserId: userId,
+          email,
+          name: resolvedName,
+          avatarUrl: clerkUser.imageUrl ?? null,
+        },
+        update: {
+          email,
+          name: resolvedName !== "Unknown" ? resolvedName : undefined,
+          avatarUrl: clerkUser.imageUrl ?? null,
+        },
+      });
 
   let org = null;
   if (orgId) {
