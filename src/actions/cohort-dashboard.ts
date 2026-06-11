@@ -11,6 +11,8 @@ export type SessionRow = {
   datetime: Date;
   type: string;
   notes: string | null;
+  projectId: string;
+  projectName: string;
 };
 
 export type StudentStatusRow = {
@@ -242,7 +244,7 @@ export async function getCohortDashboardData(): Promise<CohortDashboardData | nu
 
   // Aggregate upcoming sessions from all projects
   const upcomingSessions = allProjectsRaw
-    .flatMap((p) => p.sessions)
+    .flatMap((p) => p.sessions.map((s) => ({ ...s, projectId: p.id, projectName: p.name })))
     .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
     .slice(0, 5);
 

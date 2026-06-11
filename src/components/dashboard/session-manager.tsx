@@ -1,18 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2, Loader2, CalendarDays } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import { format, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { addProjectSession, deleteProjectSession } from "@/actions/cohort-dashboard";
 import type { SessionRow } from "@/actions/cohort-dashboard";
 import { cn } from "@/lib/utils";
 
-const TYPE_COLORS: Record<string, string> = {
-  class:        "bg-primary/10 text-primary",
-  workshop:     "bg-violet-100 text-violet-700",
-  presentation: "bg-amber-100 text-amber-700",
-  other:        "bg-muted text-muted-foreground",
-};
+type Project = { id: string; name: string };
 
 function sessionDateLabel(date: Date): string {
   const d = new Date(date);
@@ -23,29 +18,32 @@ function sessionDateLabel(date: Date): string {
   return format(d, "EEE, MMM d");
 }
 
-export function SessionManager({ sessions, projectId }: {
+export function SessionManager({ sessions, projectId, projects = [] }: {
   sessions: SessionRow[];
   projectId: string;
+  projects?: Project[];
 }) {
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle]       = useState("");
-  const [date, setDate]         = useState("");
-  const [time, setTime]         = useState("18:00");
-  const [type, setType]         = useState("class");
-  const [notes, setNotes]       = useState("");
-  const [isPending, start]      = useTransition();
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const defaultProjectId = projectId;
+  const [showForm, setShowForm]             = useState(false);
+  const [title, setTitle]                   = useState("");
+  const [date, setDate]                     = useState("");
+  const [time, setTime]                     = useState("18:00");
+  const [selectedProject, setSelectedProject] = useState(defaultProjectId);
+  const [notes, setNotes]                   = useState("");
+  const [isPending, start]                  = useTransition();
+  const [deleting, setDeleting]             = useState<string | null>(null);
 
   function reset() {
-    setTitle(""); setDate(""); setTime("18:00"); setType("class"); setNotes("");
+    setTitle(""); setDate(""); setTime("18:00");
+    setSelectedProject(defaultProjectId); setNotes("");
     setShowForm(false);
   }
 
   function handleAdd() {
-    if (!title.trim() || !date) return;
+    if (!title.trim() || !date || !selectedProject) return;
     const datetime = new Date(`${date}T${time}`).toISOString();
     start(async () => {
-      await addProjectSession(projectId, { title: title.trim(), datetime, type, notes });
+      await addProjectSession(selectedProject, { title: title.trim(), datetime, type: "class", notes });
       reset();
     });
   }
@@ -57,6 +55,8 @@ export function SessionManager({ sessions, projectId }: {
       setDeleting(null);
     });
   }
+
+  const inputCls = "w-full text-sm px-3 py-2 rounded-lg border border-border bg-card text-foreground outline-none focus:border-primary/50";
 
   return (
     <div className="space-y-2">
@@ -80,11 +80,8 @@ export function SessionManager({ sessions, projectId }: {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
-              <span className={cn(
-                "shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize",
-                TYPE_COLORS[s.type] ?? TYPE_COLORS.other
-              )}>
-                {s.type}
+              <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary truncate max-w-[120px]">
+                {s.projectName}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -107,20 +104,33 @@ export function SessionManager({ sessions, projectId }: {
 
       {showForm ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2.5">
+          {/* Project picker */}
+          {projects.length > 1 && (
+            <select
+              value={selectedProject}
+              onChange={(e) => setSelectedProject(e.target.value)}
+              className={inputCls}
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+
           <input
             autoFocus
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Session title"
-            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-card text-foreground outline-none focus:border-primary/50"
+            className={inputCls}
           />
           <div className="flex gap-2">
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="flex-1 text-sm px-3 py-2 rounded-lg border border-border bg-card text-foreground outline-none focus:border-primary/50"
+              className={cn(inputCls, "flex-1")}
             />
             <input
               type="time"
@@ -129,20 +139,10 @@ export function SessionManager({ sessions, projectId }: {
               className="w-28 text-sm px-3 py-2 rounded-lg border border-border bg-card text-foreground outline-none focus:border-primary/50"
             />
           </div>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-card text-foreground outline-none focus:border-primary/50"
-          >
-            <option value="class">Class</option>
-            <option value="workshop">Workshop</option>
-            <option value="presentation">Presentation</option>
-            <option value="other">Other</option>
-          </select>
           <div className="flex gap-2">
             <button
               onClick={handleAdd}
-              disabled={isPending || !title.trim() || !date}
+              disabled={isPending || !title.trim() || !date || !selectedProject}
               className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}

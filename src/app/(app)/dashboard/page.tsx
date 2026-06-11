@@ -410,7 +410,11 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
             <span className="text-sm font-semibold text-foreground">Upcoming Sessions</span>
           </div>
           <div className="px-4 py-3">
-            <SessionManager sessions={upcomingSessions} projectId={project.id} />
+            <SessionManager
+              sessions={upcomingSessions}
+              projectId={project.id}
+              projects={allProjects.map((p) => ({ id: p.id, name: p.name }))}
+            />
           </div>
         </div>
 
@@ -420,7 +424,10 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
             <Zap className="w-3.5 h-3.5 text-muted-foreground mr-2" />
             <span className="text-sm font-semibold text-foreground">Quick Actions</span>
           </div>
-          <AdminQuickActions projectId={project.id} />
+          <AdminQuickActions
+            projectId={project.id}
+            projects={allProjects.map((p) => ({ id: p.id, name: p.name }))}
+          />
         </div>
 
         {/* Recent Activity */}
