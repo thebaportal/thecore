@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
+import { addDays, addWeeks, addMonths } from "date-fns";
 import {
   Pencil, Plus, Loader2,
   FileText, List, ClipboardList,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 type Mandate = {
   projectDescription?: string | null;
   timelineWeeks?: number | null;
+  timelineDurationUnit?: string | null;
   timelineTolerance?: string | null;
   startDate?: Date | string | null;
   endDate?: Date | string | null;
@@ -26,6 +28,43 @@ type Mandate = {
   keyDeliverables?: string | null;
   nextSteps?: string | null;
 };
+
+type ToleranceUnit = "Days" | "Weeks" | "Months";
+
+function parseToleranceAmt(val: string | null | undefined): string {
+  const match = (val ?? "").trim().match(/^(\d+)/);
+  return match?.[1] ?? "";
+}
+
+function parseToleranceUnit(val: string | null | undefined): ToleranceUnit {
+  const lower = (val ?? "").toLowerCase();
+  if (lower.includes("day")) return "Days";
+  if (lower.includes("month")) return "Months";
+  return "Weeks";
+}
+
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y!, m! - 1, d!);
+}
+
+function toDateInput(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${dd}`;
+}
+
+function calcEndDate(startDate: string, amt: string, unit: ToleranceUnit): string {
+  if (!startDate || !amt) return "";
+  const n = parseInt(amt);
+  if (!n || n <= 0) return "";
+  const start = parseLocalDate(startDate);
+  const end =
+    unit === "Days"   ? addDays(start, n)   :
+    unit === "Months" ? addMonths(start, n) :
+                        addWeeks(start, n);
+  return toDateInput(end);
+}
 
 function formatCurrency(raw: string | null | undefined): string {
   if (!raw?.trim()) return "";
@@ -216,12 +255,11 @@ export function ProjectMandate({
   const [form, setForm] = useState({
     projectDescription: mandate?.projectDescription ?? "",
     timelineWeeks: mandate?.timelineWeeks?.toString() ?? "",
-    timelineTolerance: mandate?.timelineTolerance ?? "",
+    durationUnit: (mandate?.timelineDurationUnit as ToleranceUnit | undefined) ?? "Weeks",
+    timelineToleranceAmt: parseToleranceAmt(mandate?.timelineTolerance),
+    timelineToleranceUnit: parseToleranceUnit(mandate?.timelineTolerance),
     startDate: mandate?.startDate
-      ? new Date(mandate.startDate as string | Date).toISOString().split("T")[0]!
-      : "",
-    endDate: mandate?.endDate
-      ? new Date(mandate.endDate as string | Date).toISOString().split("T")[0]!
+      ? toDateInput(new Date(mandate.startDate as string | Date))
       : "",
     budget: mandate?.budget ?? "",
     budgetTolerance: mandate?.budgetTolerance ?? "",
@@ -235,9 +273,15 @@ export function ProjectMandate({
       const data: MandateInput = {
         projectDescription: form.projectDescription || undefined,
         timelineWeeks: form.timelineWeeks ? parseInt(form.timelineWeeks) : null,
-        timelineTolerance: form.timelineTolerance || undefined,
-        startDate: form.startDate ? new Date(form.startDate) : null,
-        endDate: form.endDate ? new Date(form.endDate) : null,
+        timelineDurationUnit: form.timelineWeeks ? form.durationUnit : null,
+        timelineTolerance: form.timelineToleranceAmt
+          ? `${form.timelineToleranceAmt} ${form.timelineToleranceUnit}`
+          : undefined,
+        startDate: form.startDate ? parseLocalDate(form.startDate) : null,
+        endDate: (() => {
+          const d = calcEndDate(form.startDate, form.timelineWeeks, form.durationUnit);
+          return d ? parseLocalDate(d) : null;
+        })(),
         budget: form.budget || undefined,
         budgetTolerance: form.budgetTolerance || undefined,
         scope: form.scope || undefined,
@@ -365,7 +409,7 @@ export function ProjectMandate({
                   <StatRow
                     icon={Clock} iconBg="bg-amber-50" iconColor="text-amber-600"
                     label="Duration"
-                    value={`${mandate.timelineWeeks} week${mandate.timelineWeeks !== 1 ? "s" : ""}`}
+                    value={`${mandate.timelineWeeks} ${mandate.timelineDurationUnit ?? "Weeks"}`}
                     sub={mandate.timelineTolerance ? `± ${mandate.timelineTolerance}` : undefined}
                   />
                 )}
@@ -485,8 +529,9 @@ function StatRow({ icon: Icon, iconBg, iconColor, label, value, sub }: {
 // ── Edit dialog (unchanged logic) ─────────────────────────────────────────────
 
 type FormState = {
-  projectDescription: string; timelineWeeks: string; timelineTolerance: string;
-  startDate: string; endDate: string; budget: string; budgetTolerance: string;
+  projectDescription: string; timelineWeeks: string; durationUnit: ToleranceUnit;
+  timelineToleranceAmt: string; timelineToleranceUnit: ToleranceUnit;
+  startDate: string; budget: string; budgetTolerance: string;
   scope: string; keyDeliverables: string; nextSteps: string;
 };
 
@@ -495,6 +540,13 @@ function EditDialog({ open, onOpenChange, form, setForm, onSave, isPending }: {
   form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>;
   onSave: () => void; isPending: boolean;
 }) {
+  const computedEnd = useMemo(
+    () => calcEndDate(form.startDate, form.timelineWeeks, form.durationUnit),
+    [form.startDate, form.timelineWeeks, form.durationUnit]
+  );
+  const displayEnd = computedEnd
+    ? new Date(computedEnd + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "—";
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
@@ -514,14 +566,44 @@ function EditDialog({ open, onOpenChange, form, setForm, onSave, isPending }: {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Duration (weeks)</label>
-              <Input type="number" placeholder="8" value={form.timelineWeeks}
-                onChange={(e) => setForm((f) => ({ ...f, timelineWeeks: e.target.value }))} />
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Duration</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number" min="1" placeholder="8"
+                  className="w-16"
+                  value={form.timelineWeeks}
+                  onChange={(e) => setForm((f) => ({ ...f, timelineWeeks: e.target.value }))}
+                />
+                <select
+                  value={form.durationUnit}
+                  onChange={(e) => setForm((f) => ({ ...f, durationUnit: e.target.value as ToleranceUnit }))}
+                  className="flex-1 text-sm px-3 rounded-md border border-input bg-background text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="Days">Days</option>
+                  <option value="Weeks">Weeks</option>
+                  <option value="Months">Months</option>
+                </select>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tolerance</label>
-              <Input placeholder="1 week" value={form.timelineTolerance}
-                onChange={(e) => setForm((f) => ({ ...f, timelineTolerance: e.target.value }))} />
+              <div className="flex gap-2">
+                <Input
+                  type="number" min="1" placeholder="1"
+                  className="w-20"
+                  value={form.timelineToleranceAmt}
+                  onChange={(e) => setForm((f) => ({ ...f, timelineToleranceAmt: e.target.value }))}
+                />
+                <select
+                  value={form.timelineToleranceUnit}
+                  onChange={(e) => setForm((f) => ({ ...f, timelineToleranceUnit: e.target.value as ToleranceUnit }))}
+                  className="flex-1 text-sm px-3 rounded-md border border-input bg-background text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="Days">Days</option>
+                  <option value="Weeks">Weeks</option>
+                  <option value="Months">Months</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -532,9 +614,12 @@ function EditDialog({ open, onOpenChange, form, setForm, onSave, isPending }: {
                 onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">End Date</label>
-              <Input type="date" value={form.endDate}
-                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                End Date <span className="normal-case font-normal text-muted-foreground/60">(auto)</span>
+              </label>
+              <div className="flex h-9 items-center px-3 rounded-md border border-input bg-muted/40 text-sm text-muted-foreground">
+                {displayEnd}
+              </div>
             </div>
           </div>
 

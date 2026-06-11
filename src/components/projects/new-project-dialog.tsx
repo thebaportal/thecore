@@ -91,7 +91,6 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
       try {
         const result = await createProject({
           name: data.name,
-          description: data.description,
           color: selectedColor,
           iconEmoji: selectedEmoji ?? undefined,
           startDate: data.startDate ? new Date(data.startDate) : undefined,
@@ -226,18 +225,6 @@ export function NewProjectDialog({ open, onOpenChange, templates: templatesProp 
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
-            </div>
-
-            {/* Description */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">
-                Description <span className="text-muted-foreground font-normal">(optional — saved to mandate)</span>
-              </label>
-              <Textarea
-                {...form.register("description")}
-                placeholder="What is this project about?"
-                className="resize-none h-20 text-sm"
-              />
             </div>
 
             {/* Color */}

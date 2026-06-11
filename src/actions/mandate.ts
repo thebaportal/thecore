@@ -8,6 +8,7 @@ import { createNotificationsForUsers } from "@/lib/notifications";
 export type MandateInput = {
   projectDescription?: string;
   timelineWeeks?: number | null;
+  timelineDurationUnit?: string | null;
   timelineTolerance?: string;
   startDate?: Date | null;
   endDate?: Date | null;

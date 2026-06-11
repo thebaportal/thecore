@@ -183,6 +183,7 @@ model ProjectMandate {
   projectId          String    @unique
   projectDescription String?
   timelineWeeks      Int?
+  timelineDurationUnit String?
   timelineTolerance  String?
   startDate          DateTime?
   endDate            DateTime?

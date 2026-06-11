@@ -51,6 +51,7 @@ export async function getUserNotifications(): Promise<AppNotification[]> {
               take: 1,
               select: { id: true, body: true, createdAt: true, author: { select: { name: true } } },
             },
+            project: { select: { id: true, name: true } },
           },
         },
       },
@@ -73,9 +74,13 @@ export async function getUserNotifications(): Promise<AppNotification[]> {
     const lastMsg = p.ping.messages[0];
     if (!lastMsg) continue;
     const isUnread = !p.lastReadAt || lastMsg.createdAt > p.lastReadAt;
-    const pingTitle =
-      p.ping.title ??
-      (p.ping.type === "DIRECT" ? "Direct message" : "Group message");
+    const isProjectChat = Boolean(p.ping.project);
+    const pingTitle = isProjectChat
+      ? `${p.ping.project!.name} chat`
+      : p.ping.title ?? (p.ping.type === "DIRECT" ? "Direct message" : "Group message");
+    const href = isProjectChat
+      ? `/projects/${p.ping.project!.id}/messages`
+      : `/inbox/${p.pingId}`;
 
     items.push({
       id: `ping-${p.pingId}`,
@@ -84,7 +89,7 @@ export async function getUserNotifications(): Promise<AppNotification[]> {
       at: lastMsg.createdAt,
       title: `${lastMsg.author.name} in ${pingTitle}`,
       body: lastMsg.body.slice(0, 80),
-      href: `/inbox/${p.pingId}`,
+      href,
     });
   }
 
