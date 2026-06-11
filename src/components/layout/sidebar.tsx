@@ -93,8 +93,8 @@ export function Sidebar({
     <div className={cn(
       "flex shrink-0 border-b border-white/10",
       collapsed
-        ? "flex-col items-center gap-1.5 pt-3 pb-2 px-2"
-        : "flex-row items-center h-[60px] px-3 gap-2"
+        ? "flex-col items-center gap-1 pt-2.5 pb-2 px-2"
+        : "flex-row items-center h-[52px] px-3 gap-2"
     )}>
       {/* Logo / org identity */}
       {collapsed ? (
@@ -106,8 +106,7 @@ export function Sidebar({
           <img
             src={orgLogoUrl}
             alt={orgName}
-            className="h-9 w-auto max-w-[150px] object-contain"
-            style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.35)) drop-shadow(0 0 2px rgba(255,255,255,0.5))" }}
+            className="h-7 w-auto max-w-[140px] object-contain"
           />
         </div>
       ) : (

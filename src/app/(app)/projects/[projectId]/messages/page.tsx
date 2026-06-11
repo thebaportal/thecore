@@ -35,7 +35,7 @@ export default async function ProjectMessagesPage({
   const memberUsers = members.map((m) => m.user);
 
   return (
-    <div className="-mx-6 -mt-6 h-[calc(100dvh-186px)]">
+    <div className="-mx-6 -mt-6 -mb-6 sm:-mb-8 h-[calc(100dvh-230px)]">
       <PingThread
         pingId={pingId}
         pingType="GROUP"

@@ -51,7 +51,13 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
   const [assigningBoth, setAssigningBoth] = useState<Set<string>>(new Set());
   const [movingStudent, setMovingStudent] = useState<Set<string>>(new Set());
   const [resolved, setResolved] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<string | null>(null);
   const router = useRouter();
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   function handleOpen() {
     setOpen(true);
@@ -91,12 +97,39 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
     startTransition(async () => {
       try {
         const res = await inviteToProject(projectId, validRows, role);
-        setResults(res);
-        setStep("done");
+        const hasConflicts = res.some((r) => r.status === "already_in_project");
+        const hasErrors = res.some((r) => r.status === "error");
+
+        if (!hasConflicts && !hasErrors) {
+          // Clean success — close dialog, refresh list, show toast
+          setOpen(false);
+          router.refresh();
+          const emails = validRows.map((r) => r.email.trim()).filter(Boolean);
+          showToast(
+            emails.length === 1
+              ? `Invitation sent to ${emails[0]}`
+              : `${emails.length} invitations sent`
+          );
+        } else {
+          // Conflicts or errors need attention — show the results panel
+          setResults(res);
+          setStep("done");
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
       }
     });
+  }
+
+  function finishConflictResolution(email: string, newResolved: Set<string>) {
+    router.refresh();
+    const remaining = results.filter(
+      (r) => r.status === "already_in_project" && !newResolved.has(r.email)
+    );
+    if (remaining.length === 0) {
+      setOpen(false);
+      showToast("Student assignments updated.");
+    }
   }
 
   function handleAssignBoth(email: string) {
@@ -107,8 +140,9 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
     startTransition(async () => {
       try {
         await inviteToProject(projectId, [invitee], role, [email], []);
-        setResolved((prev) => new Set(prev).add(email));
-        router.refresh();
+        const next = new Set(resolved).add(email);
+        setResolved(next);
+        finishConflictResolution(email, next);
       } finally {
         setAssigningBoth((prev) => { const n = new Set(prev); n.delete(email); return n; });
       }
@@ -123,8 +157,9 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
     startTransition(async () => {
       try {
         await inviteToProject(projectId, [invitee], role, [], [email]);
-        setResolved((prev) => new Set(prev).add(email));
-        router.refresh();
+        const next = new Set(resolved).add(email);
+        setResolved(next);
+        finishConflictResolution(email, next);
       } finally {
         setMovingStudent((prev) => { const n = new Set(prev); n.delete(email); return n; });
       }
@@ -366,6 +401,14 @@ export function ProjectInviteButton({ projectId }: { projectId: string }) {
 
         </DialogContent>
       </Dialog>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-foreground text-background text-sm font-medium shadow-lg">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          {toast}
+        </div>
+      )}
     </>
   );
 }

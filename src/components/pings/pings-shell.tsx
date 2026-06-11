@@ -135,7 +135,7 @@ export function PingsShell({
   return (
     <>
       <div
-        className="-mt-6 sm:-mt-8 -mx-4 sm:-mx-6 flex overflow-hidden bg-background"
+        className="-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 -mx-4 sm:-mx-6 flex overflow-hidden bg-background"
         style={{ height: "calc(100vh - 56px)" }}
       >
         {/* ── Left panel ── */}
