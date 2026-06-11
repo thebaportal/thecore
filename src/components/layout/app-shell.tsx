@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { ShellLayout } from "./shell-layout";
 import { CommandBarProvider } from "@/components/command-bar/command-bar-provider";
 import { KeyboardShortcutsModal } from "./keyboard-shortcuts";
@@ -131,11 +131,28 @@ async function getOverdueTaskCount(clerkUserId: string, clerkOrgId: string) {
 
 
 async function getOrgBranding(clerkOrgId: string) {
-  const org = await db.organization.findUnique({
-    where: { clerkOrgId },
-    select: { name: true, displayName: true, logoUrl: true, brandColor: true, secondaryColor: true },
-  });
-  const logoUrl = org?.logoUrl ?? null;
+  const [org, client] = await Promise.all([
+    db.organization.findUnique({
+      where: { clerkOrgId },
+      select: { name: true, displayName: true, logoUrl: true, brandColor: true, secondaryColor: true },
+    }),
+    clerkClient(),
+  ]);
+
+  // Always pull fresh logo from Clerk so logo updates are instant without
+  // relying on webhooks. Sync back to DB in the background.
+  let logoUrl = org?.logoUrl ?? null;
+  try {
+    const clerkOrg = await client.organizations.getOrganization({ organizationId: clerkOrgId });
+    const freshUrl = clerkOrg.imageUrl ?? null;
+    if (freshUrl !== org?.logoUrl) {
+      logoUrl = freshUrl;
+      void db.organization.update({ where: { clerkOrgId }, data: { logoUrl: freshUrl } });
+    }
+  } catch {
+    // Clerk API unavailable — fall back to DB value
+  }
+
   return {
     orgName: org?.displayName ?? org?.name ?? "",
     orgLogoUrl: logoUrl,
