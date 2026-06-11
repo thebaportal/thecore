@@ -148,6 +148,7 @@ export async function inviteToProject(
 
       // Not yet in org — send Clerk invitation with role + name metadata
       let clerkInvitationId: string | undefined;
+      let clerkError: string | undefined;
       try {
         const inv = await client.organizations.createOrganizationInvitation({
           organizationId: org.clerkOrgId,
@@ -163,8 +164,16 @@ export async function inviteToProject(
           },
         });
         clerkInvitationId = inv.id;
-      } catch {
-        // Clerk may throw if already an org member at the Clerk level — still record the project invitation
+      } catch (err) {
+        // Capture the error so the caller can surface it rather than silently failing
+        const e = err as { errors?: { message: string; longMessage?: string }[]; message?: string };
+        clerkError = e?.errors?.[0]?.longMessage ?? e?.errors?.[0]?.message ?? e?.message ?? "Clerk invitation failed";
+      }
+
+      // If Clerk failed and we have no clerkInvitationId, surface the error
+      if (!clerkInvitationId && clerkError) {
+        results.push({ email, status: "error", error: `Email not sent: ${clerkError}` });
+        continue;
       }
 
       await db.projectInvitation.upsert({
