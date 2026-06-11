@@ -390,6 +390,38 @@ export async function addProjectSession(projectId: string, data: {
   revalidatePath("/dashboard");
 }
 
+export async function updateProjectSession(sessionId: string, data: {
+  title: string;
+  datetime: string;
+  notes?: string;
+}) {
+  const { userId, orgId } = await auth();
+  if (!userId || !orgId) throw new Error("Unauthorized");
+
+  const [user, org] = await Promise.all([
+    db.user.findUnique({ where: { clerkUserId: userId } }),
+    db.organization.findUnique({ where: { clerkOrgId: orgId } }),
+  ]);
+  if (!user || !org) throw new Error("Not found");
+
+  const membership = await db.orgMembership.findUnique({
+    where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
+    select: { role: true },
+  });
+  if (membership?.role !== "OWNER" && membership?.role !== "ADMIN") throw new Error("Admin only");
+
+  await db.projectSession.updateMany({
+    where: { id: sessionId, project: { organizationId: org.id } },
+    data: {
+      title: data.title.trim(),
+      datetime: new Date(data.datetime),
+      notes: data.notes?.trim() || null,
+    },
+  });
+
+  revalidatePath("/dashboard");
+}
+
 export async function deleteProjectSession(sessionId: string) {
   const { userId, orgId } = await auth();
   if (!userId || !orgId) throw new Error("Unauthorized");

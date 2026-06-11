@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Pencil } from "lucide-react";
 import { format, isToday, isTomorrow, differenceInDays } from "date-fns";
-import { addProjectSession, deleteProjectSession } from "@/actions/cohort-dashboard";
+import { addProjectSession, updateProjectSession, deleteProjectSession } from "@/actions/cohort-dashboard";
 import type { SessionRow } from "@/actions/cohort-dashboard";
 import { cn } from "@/lib/utils";
 
@@ -24,18 +24,31 @@ export function SessionManager({ sessions, projectId, projects = [] }: {
   projects?: Project[];
 }) {
   const defaultProjectId = projectId;
-  const [showForm, setShowForm]             = useState(false);
-  const [title, setTitle]                   = useState("");
-  const [date, setDate]                     = useState("");
-  const [time, setTime]                     = useState("18:00");
+  const [showForm, setShowForm]               = useState(false);
+  const [editingId, setEditingId]             = useState<string | null>(null);
+  const [title, setTitle]                     = useState("");
+  const [date, setDate]                       = useState("");
+  const [time, setTime]                       = useState("18:00");
   const [selectedProject, setSelectedProject] = useState(defaultProjectId);
-  const [notes, setNotes]                   = useState("");
-  const [isPending, start]                  = useTransition();
-  const [deleting, setDeleting]             = useState<string | null>(null);
+  const [notes, setNotes]                     = useState("");
+  const [isPending, start]                    = useTransition();
+  const [deleting, setDeleting]               = useState<string | null>(null);
 
   function reset() {
     setTitle(""); setDate(""); setTime("18:00");
     setSelectedProject(defaultProjectId); setNotes("");
+    setShowForm(false); setEditingId(null);
+  }
+
+  function startEdit(s: SessionRow) {
+    const d = new Date(s.datetime);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setEditingId(s.id);
+    setTitle(s.title);
+    setDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    setTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setNotes(s.notes ?? "");
+    setSelectedProject(s.projectId);
     setShowForm(false);
   }
 
@@ -44,6 +57,15 @@ export function SessionManager({ sessions, projectId, projects = [] }: {
     const datetime = new Date(`${date}T${time}`).toISOString();
     start(async () => {
       await addProjectSession(selectedProject, { title: title.trim(), datetime, type: "class", notes });
+      reset();
+    });
+  }
+
+  function handleUpdate() {
+    if (!editingId || !title.trim() || !date) return;
+    const datetime = new Date(`${date}T${time}`).toISOString();
+    start(async () => {
+      await updateProjectSession(editingId, { title: title.trim(), datetime, notes });
       reset();
     });
   }
@@ -89,23 +111,38 @@ export function SessionManager({ sessions, projectId, projects = [] }: {
             </p>
             {s.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 truncate">{s.notes}</p>}
           </div>
-          <button
-            onClick={() => handleDelete(s.id)}
-            disabled={isPending}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-muted"
-          >
-            {deleting === s.id
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <Trash2 className="w-3.5 h-3.5" />
-            }
-          </button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => startEdit(s)}
+              disabled={isPending}
+              className="p-1 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted"
+              title="Edit"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => handleDelete(s.id)}
+              disabled={isPending}
+              className="p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-muted"
+              title="Delete"
+            >
+              {deleting === s.id
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Trash2 className="w-3.5 h-3.5" />
+              }
+            </button>
+          </div>
         </div>
       ))}
 
-      {showForm ? (
+      {(showForm || editingId) && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2.5">
-          {/* Project picker */}
-          {projects.length > 1 && (
+          {editingId && (
+            <p className="text-[11px] font-semibold text-primary uppercase tracking-wide">Editing session</p>
+          )}
+
+          {/* Project picker — only shown when adding, not editing */}
+          {!editingId && projects.length > 1 && (
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
@@ -141,12 +178,15 @@ export function SessionManager({ sessions, projectId, projects = [] }: {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={handleAdd}
-              disabled={isPending || !title.trim() || !date || !selectedProject}
+              onClick={editingId ? handleUpdate : handleAdd}
+              disabled={isPending || !title.trim() || !date || (!editingId && !selectedProject)}
               className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              Add session
+              {isPending
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : editingId ? <Pencil className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />
+              }
+              {editingId ? "Save changes" : "Add session"}
             </button>
             <button
               onClick={reset}
@@ -156,7 +196,9 @@ export function SessionManager({ sessions, projectId, projects = [] }: {
             </button>
           </div>
         </div>
-      ) : (
+      )}
+
+      {!showForm && !editingId && (
         <button
           onClick={() => setShowForm(true)}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
