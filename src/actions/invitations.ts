@@ -77,7 +77,7 @@ async function assertInstructorOnProject(projectId: string) {
   }
   if (!project) throw new Error("Project not found");
 
-  return { org, dbUser, project };
+  return { org, dbUser, project, clerkUserId: userId };
 }
 
 export type ProjectInviteeInput = { firstName: string; lastName: string; email: string };
@@ -94,7 +94,7 @@ export async function inviteToProject(
   overrideConflicts: string[] = [],
   moveConflicts: string[] = [],
 ): Promise<ProjectInviteResult[]> {
-  const { org, project } = await assertInstructorOnProject(projectId);
+  const { org, project, clerkUserId: inviterUserId } = await assertInstructorOnProject(projectId);
 
   const client = await clerkClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -154,9 +154,7 @@ export async function inviteToProject(
           organizationId: org.clerkOrgId,
           emailAddress: email,
           role,
-          // Land new users on the sign-up page WITH the __clerk_ticket so Clerk
-          // processes the invitation there (skipping the "Create Organization" wizard).
-          // After sign-up, Clerk redirects to redirect_url → /accept-invite/[projectId].
+          inviterUserId,
           redirectUrl: `${appUrl}/sign-up?redirect_url=${encodeURIComponent(`/accept-invite/${projectId}`)}`,
           publicMetadata: {
             firstName: invitee.firstName.trim(),
