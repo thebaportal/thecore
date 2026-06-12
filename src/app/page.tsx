@@ -48,8 +48,8 @@ const features = [
 const BG = "oklch(0.168 0.022 264)";
 
 export default async function LandingPage() {
-  const { userId } = await auth();
-  if (userId) redirect("/dashboard");
+  const { userId, orgId } = await auth();
+  if (userId) redirect(orgId ? "/dashboard" : "/organization-selection");
 
   return (
     <div className="min-h-screen flex flex-col">
