@@ -666,8 +666,14 @@ export default async function DashboardPage() {
     const studentData = await getStudentDashboardData();
     if (!studentData) {
       return (
-        <div className="flex items-center justify-center py-24">
+        <div className="flex flex-col items-center justify-center gap-3 py-24">
           <p className="text-sm text-muted-foreground">Setting up your workspace…</p>
+          <a
+            href="/dashboard"
+            className="text-xs text-primary hover:underline"
+          >
+            Refresh
+          </a>
         </div>
       );
     }

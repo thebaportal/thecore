@@ -323,6 +323,7 @@ export async function resendProjectInvitation(projectId: string, invitationId: s
       organizationId: org.clerkOrgId,
       emailAddress: invitation.email,
       role: "org:member",
+      inviterUserId: userId,
       redirectUrl: `${appUrl}/sign-up?redirect_url=${encodeURIComponent(`/accept-invite/${projectId}`)}`,
       publicMetadata: {
         firstName: invitation.firstName ?? "",

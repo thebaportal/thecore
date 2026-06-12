@@ -90,11 +90,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let studentProjectId: string | null = null;
 
   if (isStudent) {
-    const pm = await db.projectMember.findFirst({
+    let pm = await db.projectMember.findFirst({
       where: { userId: dbUser.id },
       select: { projectId: true },
       orderBy: { joinedAt: "asc" },
     });
+
+    // No project assigned yet — check for a pending invitation and fulfil it.
+    // This recovers the case where syncCurrentIdentity() failed during accept-invite
+    // so the student isn't stuck on "Setting up your workspace…" indefinitely.
+    if (!pm && email) {
+      const pending = await db.projectInvitation.findMany({
+        where: { email: email.toLowerCase(), project: { organizationId: dbOrg.id } },
+        select: { id: true, projectId: true },
+        take: 1,
+      });
+      if (pending.length > 0) {
+        const inv = pending[0]!;
+        await db.projectMember.createMany({
+          data: [{ projectId: inv.projectId, userId: dbUser.id }],
+          skipDuplicates: true,
+        });
+        await db.projectInvitation.deleteMany({
+          where: { id: { in: pending.map((i) => i.id) } },
+        });
+        pm = { projectId: inv.projectId };
+      }
+    }
+
     studentProjectId = pm?.projectId ?? null;
   }
 

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { syncCurrentIdentity } from "@/actions/projects";
-import { db } from "@/lib/db";
 
 export default async function AcceptInvitePage({
   params,
@@ -26,12 +25,13 @@ export default async function AcceptInvitePage({
 
   // Signed in with an active org — fulfil any pending project invitation and go
   // straight to the project (no intermediate "You're in!" page).
-  await syncCurrentIdentity();
-
-  const project = await db.project.findFirst({
-    where: { id: projectId },
-    select: { id: true },
-  });
+  // Errors here must not crash the page — the dashboard handles missing data
+  // gracefully with "Setting up your workspace…".
+  try {
+    await syncCurrentIdentity();
+  } catch (err) {
+    console.error("[accept-invite] syncCurrentIdentity failed:", err);
+  }
 
   redirect("/dashboard");
 }

@@ -22,7 +22,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider publishableKey="pk_live_Y2xlcmsub250aGVjb3JlLmNvbSQ">
+    <ClerkProvider
+      publishableKey="pk_live_Y2xlcmsub250aGVjb3JlLmNvbSQ"
+      localization={{
+        unstable__errors: {
+          form_password_pwned:
+            "This password has appeared in a known data breach. Please choose a different password that you don't use on other sites.",
+        },
+      }}
+    >
       <html lang="en" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
         <body className="min-h-full">
           <TooltipProvider delay={300}>{children}</TooltipProvider>
