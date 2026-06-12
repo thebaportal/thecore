@@ -9,7 +9,6 @@ import {
   BookOpen, LayoutTemplate, MessageCircle, HelpCircle, Megaphone,
 } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { OrgSwitcher } from "@/components/layout/org-switcher";
 import { cn } from "@/lib/utils";
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
@@ -195,11 +194,6 @@ export function Sidebar({
         "px-2 py-3 border-t border-sidebar-border shrink-0",
         collapsed ? "flex flex-col items-center space-y-2" : "space-y-2"
       )}>
-        {!isStudent && !collapsed && (
-          <div className="px-1">
-            <OrgSwitcher orgLogoUrl={orgLogoUrl} orgName={orgName} />
-          </div>
-        )}
         {isStudent && !collapsed ? (
           <div className="px-1 flex items-center gap-2.5">
             <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
