@@ -1,9 +1,23 @@
 import { SignUp } from "@clerk/nextjs";
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect_url?: string }>;
+}) {
+  const { redirect_url } = await searchParams;
+  // Only allow relative paths to prevent open-redirect attacks.
+  // forceRedirectUrl takes absolute priority and bypasses Clerk's own
+  // "Organization Setup" wizard, which would otherwise intercept new
+  // invited users before they reach our accept-invite flow.
+  const dest =
+    redirect_url?.startsWith("/") && !redirect_url.startsWith("//")
+      ? redirect_url
+      : "/organization-selection";
+
   return (
     <SignUp
-      fallbackRedirectUrl="/organization-selection"
+      forceRedirectUrl={dest}
       appearance={{
         variables: {
           colorPrimary: "#1e3a8a",
