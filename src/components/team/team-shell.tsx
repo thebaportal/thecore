@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Search, Users, ChevronDown, ChevronRight } from "lucide-react";
 import { UserAvatar } from "@/components/users/user-avatar";
 import { MessageButton } from "@/components/pings/message-button";
+import { InviteButton } from "@/components/team/invite-button";
 
 type Member = {
   id: string;
@@ -251,11 +252,14 @@ export function TeamShell({
     <div className="-mt-6 sm:-mt-8 -mx-4 sm:-mx-6 min-h-screen bg-slate-100 px-4 sm:px-6 pt-6 sm:pt-8 pb-16">
 
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{orgName || "Team Workspace"}</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
-        </p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{orgName || "Team Workspace"}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
+          </p>
+        </div>
+        <InviteButton />
       </div>
 
       {/* Search */}
