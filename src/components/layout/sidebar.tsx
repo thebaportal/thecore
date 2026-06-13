@@ -92,7 +92,7 @@ export function Sidebar({
       "flex shrink-0 border-b border-white/10",
       collapsed
         ? "flex-col items-center gap-1 pt-2.5 pb-2 px-2"
-        : "flex-row items-center h-[52px] px-3 gap-2"
+        : "flex-row items-center h-14 px-3 gap-2"
     )}>
       {/* Logo / org identity */}
       {collapsed ? (
@@ -100,11 +100,11 @@ export function Sidebar({
           <span className="text-primary-foreground text-xs font-bold">{initials}</span>
         </div>
       ) : orgLogoUrl ? (
-        <div className="flex-1 min-w-0 flex items-center">
+        <div className="flex-1 min-w-0 flex items-center py-1">
           <img
             src={orgLogoUrl}
             alt={orgName}
-            className="h-7 w-auto max-w-[140px] object-contain"
+            className="h-8 w-auto max-w-[148px] object-contain brightness-110 drop-shadow-sm"
           />
         </div>
       ) : (
