@@ -1,18 +1,5 @@
-import { OrganizationProfile } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
 
 export default function OrganizationProfileCatchAll() {
-  return (
-    <div className="max-w-2xl">
-      <OrganizationProfile
-        routing="path"
-        path="/settings/organization"
-        appearance={{
-          elements: {
-            rootBox: "w-full",
-            card: "border border-border rounded-xl shadow-none",
-          },
-        }}
-      />
-    </div>
-  );
+  redirect("/settings/organization");
 }

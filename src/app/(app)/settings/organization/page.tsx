@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { OrganizationProfile } from "@clerk/nextjs";
+import Link from "next/link";
+import { Users } from "lucide-react";
 import { getOrgPostCategories } from "@/actions/posts";
 import { getOrgBrandingSettings } from "@/actions/org-branding";
 import { getProjectsForReclassification, getMultiProjectReport } from "@/actions/org-settings";
@@ -7,6 +8,7 @@ import { PostCategoriesEditor } from "@/components/settings/post-categories-edit
 import { OrgBrandingForm } from "@/components/settings/org-branding-form";
 import { ProjectReclassification } from "@/components/settings/project-reclassification";
 import { MultiProjectReport } from "@/components/settings/multi-project-report";
+import { InviteButton } from "@/components/team/invite-button";
 
 export const metadata: Metadata = { title: "Organization Settings" };
 
@@ -30,16 +32,22 @@ export default async function OrganizationSettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Manage your organization profile and members.</p>
       </div>
 
-      <OrganizationProfile
-        routing="path"
-        path="/settings/organization"
-        appearance={{
-          elements: {
-            rootBox: "w-full",
-            card: "border border-border rounded-xl shadow-none",
-          },
-        }}
-      />
+      {/* Members */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Members</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Invite people by name and email. Assign them to projects from the{" "}
+              <Link href="/team" className="text-primary hover:underline">Team page</Link>.
+            </p>
+          </div>
+          <InviteButton />
+        </div>
+      </div>
 
       {/* Workspace branding */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">
