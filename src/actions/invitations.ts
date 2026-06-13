@@ -340,6 +340,52 @@ export async function resendProjectInvitation(projectId: string, invitationId: s
   revalidatePath(`/projects/${projectId}/members`);
 }
 
+// ── Org-level invitation list & revoke ────────────────────────────────────────
+
+export type PendingOrgInvitation = {
+  id: string;
+  email: string;
+  role: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: number;
+};
+
+export async function getPendingOrgInvitations(): Promise<PendingOrgInvitation[]> {
+  const { orgId } = await auth();
+  if (!orgId) return [];
+  try {
+    const client = await clerkClient();
+    const result = await client.organizations.getOrganizationInvitationList({
+      organizationId: orgId,
+      status: ["pending"],
+      limit: 100,
+    });
+    return result.data.map((inv) => ({
+      id: inv.id,
+      email: inv.emailAddress,
+      role: inv.role,
+      firstName: (inv.publicMetadata?.firstName as string) ?? null,
+      lastName: (inv.publicMetadata?.lastName as string) ?? null,
+      createdAt: inv.createdAt,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function revokeOrgInvitation(invitationId: string): Promise<void> {
+  const { userId, orgId } = await auth();
+  if (!userId || !orgId) throw new Error("Unauthorized");
+  const client = await clerkClient();
+  await client.organizations.revokeOrganizationInvitation({
+    organizationId: orgId,
+    invitationId,
+    requestingUserId: userId,
+  });
+  revalidatePath("/team");
+}
+
 export async function revokeProjectInvitation(projectId: string, invitationId: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");

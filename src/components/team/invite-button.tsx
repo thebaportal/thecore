@@ -31,7 +31,7 @@ function newRow(): Row {
 
 type Step = "role" | "details" | "done";
 
-export function InviteButton({ adminOnly = false }: { adminOnly?: boolean }) {
+export function InviteButton({ adminOnly = false, onDone }: { adminOnly?: boolean; onDone?: () => void }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("role");
   const [role, setRole] = useState<Role | null>(null);
@@ -82,6 +82,7 @@ export function InviteButton({ adminOnly = false }: { adminOnly?: boolean }) {
         const res = await inviteToOrganization(validRows, role);
         setResults(res);
         setStep("done");
+        onDone?.();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
       }

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Users, ChevronDown, ChevronRight } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Users, ChevronDown, ChevronRight, Clock, X } from "lucide-react";
 import { UserAvatar } from "@/components/users/user-avatar";
 import { MessageButton } from "@/components/pings/message-button";
 import { InviteButton } from "@/components/team/invite-button";
+import { revokeOrgInvitation, type PendingOrgInvitation } from "@/actions/invitations";
 
 type Member = {
   id: string;
@@ -186,6 +188,69 @@ function PersonCard({
   );
 }
 
+// ── Pending invitations section ───────────────────────────────────────────────
+
+function PendingInvitationsSection({ invitations }: { invitations: PendingOrgInvitation[] }) {
+  const [list, setList] = useState(invitations);
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  function handleRevoke(id: string) {
+    setRevoking(id);
+    startTransition(async () => {
+      try {
+        await revokeOrgInvitation(id);
+        setList((prev) => prev.filter((inv) => inv.id !== id));
+      } finally {
+        setRevoking(null);
+      }
+    });
+  }
+
+  if (list.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+        <Clock className="w-3.5 h-3.5" />
+        {list.length} Pending {list.length === 1 ? "Invitation" : "Invitations"}
+      </p>
+      <div className="space-y-2">
+        {list.map((inv) => {
+          const name = [inv.firstName, inv.lastName].filter(Boolean).join(" ") || null;
+          const isAdmin = inv.role === "org:admin";
+          const sentDate = new Date(inv.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          return (
+            <div
+              key={inv.id}
+              className="bg-white rounded-xl border border-amber-100 shadow-sm px-4 py-3 flex items-center gap-3"
+            >
+              <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <Clock className="w-3.5 h-3.5 text-amber-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                {name && <p className="text-sm font-medium text-slate-700 truncate leading-tight">{name}</p>}
+                <p className="text-sm text-slate-500 truncate">{inv.email}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Invited {sentDate} · {isAdmin ? "Instructor / Admin" : "Member"}
+                </p>
+              </div>
+              <button
+                onClick={() => handleRevoke(inv.id)}
+                disabled={revoking === inv.id}
+                title="Revoke invitation"
+                className="text-slate-300 hover:text-red-400 transition-colors disabled:opacity-40 shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ── Main shell ────────────────────────────────────────────────────────────────
 
 export function TeamShell({
@@ -194,13 +259,16 @@ export function TeamShell({
   people,
   projects,
   currentDbUserId,
+  pendingInvitations = [],
 }: {
   orgName: string;
   orgLogoUrl?: string | null;
   people: Member[];
   projects: Project[];
   currentDbUserId: string | null;
+  pendingInvitations?: PendingOrgInvitation[];
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const q = search.toLowerCase().trim();
 
@@ -259,7 +327,7 @@ export function TeamShell({
             {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
           </p>
         </div>
-        <InviteButton adminOnly />
+        <InviteButton adminOnly onDone={() => router.refresh()} />
       </div>
 
       {/* Search */}
@@ -272,6 +340,9 @@ export function TeamShell({
           className="w-full max-w-md pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white shadow text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
         />
       </div>
+
+      {/* Pending invitations */}
+      <PendingInvitationsSection invitations={pendingInvitations} />
 
       {/* People section */}
       {filteredPeople.length > 0 && (
