@@ -356,16 +356,18 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
         className="rounded-2xl overflow-hidden"
         style={{ background: "linear-gradient(135deg, #0f2160 0%, #1E3A8A 55%, #1d4ed8 100%)" }}
       >
-        <div className="flex items-center px-6 py-5 gap-0">
-          {/* 4 stats */}
-          <div className="flex flex-1 min-w-0 divide-x divide-white/10">
+        {/* Mobile: stacked. Desktop: single horizontal row. */}
+        <div className="flex flex-col sm:flex-row sm:items-center px-5 sm:px-6 py-5 gap-5 sm:gap-0">
+
+          {/* 4 stats — 2×2 grid on mobile, divided flex row on sm+ */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:flex sm:flex-1 sm:min-w-0 sm:divide-x sm:divide-white/10">
             {([
-              { Icon: FolderKanban, value: allProjects.length, label: allProjects.length === 1 ? "Active Project" : "Active Projects" },
-              { Icon: Users,        value: totalStudents,         label: "Students" },
-              { Icon: CalendarDays, value: upcomingSessions.length, label: "Upcoming Sessions" },
-              { Icon: ClipboardCheck, value: totalAwaitingReview, label: "Pending Reviews" },
+              { Icon: FolderKanban,   value: allProjects.length,       label: allProjects.length === 1 ? "Active Project" : "Active Projects" },
+              { Icon: Users,          value: totalStudents,             label: "Students" },
+              { Icon: CalendarDays,   value: upcomingSessions.length,   label: "Upcoming Sessions" },
+              { Icon: ClipboardCheck, value: totalAwaitingReview,       label: "Pending Reviews" },
             ] as const).map(({ Icon, value, label }) => (
-              <div key={label} className="flex-1 px-4 first:pl-0 last:pr-4">
+              <div key={label} className="sm:flex-1 sm:px-4 sm:first:pl-0 sm:last:pr-4">
                 <Icon className="w-4 h-4 text-white/40 mb-2" />
                 <p className="text-3xl font-bold text-white tabular-nums">{value}</p>
                 <p className="text-xs text-white/50 mt-0.5 leading-snug">{label}</p>
@@ -373,11 +375,11 @@ function AdminHome({ data }: { data: CohortDashboardData }) {
             ))}
           </div>
 
-          {/* Vertical divider */}
-          <div className="w-px self-stretch bg-white/10 mx-6 shrink-0" />
+          {/* Vertical divider — desktop only */}
+          <div className="hidden sm:block w-px self-stretch bg-white/10 mx-6 shrink-0" />
 
-          {/* Next session */}
-          <div className="shrink-0 w-44">
+          {/* Next session — separated by border on mobile, sidebar on sm+ */}
+          <div className="border-t border-white/10 pt-4 sm:border-0 sm:pt-0 sm:shrink-0 sm:w-44">
             <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-2">Next Session</p>
             {nextSession ? (
               <>

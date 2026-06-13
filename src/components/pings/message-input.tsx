@@ -261,14 +261,16 @@ export function MessageInput({
           {emojiOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setEmojiOpen(false)} />
-              <div className="absolute left-0 bottom-full mb-2 z-50 p-2 rounded-2xl border border-border bg-card shadow-xl">
-                <div className="grid grid-cols-6 gap-0.5">
+              {/* Mobile: fixed bottom sheet spanning full width.
+                  Desktop (sm+): absolute popup above the button. */}
+              <div className="fixed inset-x-3 bottom-20 rounded-2xl border border-border bg-card shadow-xl p-3 z-50 sm:absolute sm:inset-x-auto sm:bottom-full sm:left-0 sm:mb-2 sm:p-2">
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-0.5">
                   {QUICK_EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
                       onClick={() => insertEmoji(emoji)}
-                      className="w-9 h-9 flex items-center justify-center rounded-xl text-lg hover:bg-muted transition-colors"
+                      className="w-full aspect-square flex items-center justify-center rounded-xl text-2xl sm:w-9 sm:h-9 sm:text-lg hover:bg-muted transition-colors"
                     >
                       {emoji}
                     </button>
