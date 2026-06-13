@@ -20,6 +20,25 @@ async function requireAdmin() {
   return { user, org };
 }
 
+export type OrgMemberStats = {
+  total: number;
+  admins: number;
+  pendingInvitations: number;
+};
+
+export async function getOrgMemberStats(): Promise<OrgMemberStats | null> {
+  const { orgId } = await auth();
+  if (!orgId) return null;
+  const org = await db.organization.findUnique({ where: { clerkOrgId: orgId }, select: { id: true } });
+  if (!org) return null;
+  const [total, admins, pendingInvitations] = await Promise.all([
+    db.orgMembership.count({ where: { organizationId: org.id } }),
+    db.orgMembership.count({ where: { organizationId: org.id, role: { in: ["ADMIN", "OWNER"] } } }),
+    db.projectInvitation.count({ where: { project: { organizationId: org.id } } }),
+  ]);
+  return { total, admins, pendingInvitations };
+}
+
 const LIBRARY_PROJECTS = new Set([
   "BA Interview Prep Materials",
   "BA Learning Material",
