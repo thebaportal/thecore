@@ -30,21 +30,21 @@ function ChooseOrganizationInner() {
     }
   })();
 
+  const memberships = userMemberships?.data ?? [];
+
   useEffect(() => {
     if (!isLoaded || !setActive) return;
-    const memberships = userMemberships?.data ?? [];
-
+    // memberships.length is in the dep array so this re-runs if Clerk
+    // delivers the list after isLoaded fires (two-phase load edge case).
     if (memberships.length > 0) {
-      // Activate the first (and typically only) org, then proceed
       setActive({ organization: memberships[0]!.organization.id })
         .then(() => router.replace(dest))
         .catch(() => router.replace("/organization-selection"));
     } else {
-      // No memberships yet — fall back to org-selection which shows guidance
       router.replace("/organization-selection");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded]);
+  }, [isLoaded, memberships.length]);
 
   return (
     <div className="flex items-center justify-center py-16">

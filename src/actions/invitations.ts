@@ -290,10 +290,7 @@ export async function removeProjectMember(projectId: string, memberId: string) {
 }
 
 export async function resendProjectInvitation(projectId: string, invitationId: string) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const { org } = await assertInstructorOnProject(projectId);
+  const { org, clerkUserId: userId } = await assertInstructorOnProject(projectId);
 
   const invitation = await db.projectInvitation.findUnique({
     where: { id: invitationId, projectId },
