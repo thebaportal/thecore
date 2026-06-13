@@ -259,7 +259,7 @@ export function TeamShell({
             {people.length} {people.length === 1 ? "person" : "people"} · {activeCount} active {activeCount === 1 ? "project" : "projects"}
           </p>
         </div>
-        <InviteButton />
+        <InviteButton adminOnly />
       </div>
 
       {/* Search */}

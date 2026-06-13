@@ -31,7 +31,7 @@ function newRow(): Row {
 
 type Step = "role" | "details" | "done";
 
-export function InviteButton() {
+export function InviteButton({ adminOnly = false }: { adminOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("role");
   const [role, setRole] = useState<Role | null>(null);
@@ -42,8 +42,14 @@ export function InviteButton() {
 
   function handleOpen() {
     setOpen(true);
-    setStep("role");
-    setRole(null);
+    if (adminOnly) {
+      // Skip role selection — Team page is for admins only, students go via projects
+      setStep("details");
+      setRole("org:admin");
+    } else {
+      setStep("role");
+      setRole(null);
+    }
     setRows([newRow()]);
     setResults([]);
     setError(null);
@@ -147,17 +153,22 @@ export function InviteButton() {
           {step === "details" && (
             <>
               <DialogHeader>
-                <button
-                  onClick={() => setStep("role")}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 -mt-1 w-fit"
-                >
-                  <ArrowLeft className="w-3 h-3" /> Back
-                </button>
-                <DialogTitle className="text-lg">Enter their details</DialogTitle>
+                {!adminOnly && (
+                  <button
+                    onClick={() => setStep("role")}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3 -mt-1 w-fit"
+                  >
+                    <ArrowLeft className="w-3 h-3" /> Back
+                  </button>
+                )}
+                <DialogTitle className="text-lg">
+                  {adminOnly ? "Invite an instructor or admin" : "Enter their details"}
+                </DialogTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Inviting as{" "}
-                  <span className="font-medium text-foreground">{selectedOption?.label}</span>.
-                  They'll set up their password when they accept.
+                  {adminOnly
+                    ? "Admins have full access to the workspace. To add students, invite them from inside a project."
+                    : <>Inviting as <span className="font-medium text-foreground">{selectedOption?.label}</span>. They'll set up their password when they accept.</>
+                  }
                 </p>
               </DialogHeader>
 
