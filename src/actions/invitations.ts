@@ -386,6 +386,40 @@ export async function revokeOrgInvitation(invitationId: string): Promise<void> {
   revalidatePath("/team");
 }
 
+export async function resendOrgInvitation(
+  invitationId: string,
+  email: string,
+  role: string,
+  firstName: string | null,
+  lastName: string | null,
+): Promise<void> {
+  const { userId, orgId } = await auth();
+  if (!userId || !orgId) throw new Error("Unauthorized");
+  const client = await clerkClient();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  try {
+    await client.organizations.revokeOrganizationInvitation({
+      organizationId: orgId,
+      invitationId,
+      requestingUserId: userId,
+    });
+  } catch {
+    // Already expired or accepted — continue to resend
+  }
+
+  await client.organizations.createOrganizationInvitation({
+    organizationId: orgId,
+    emailAddress: email,
+    role: role as "org:admin" | "org:member",
+    inviterUserId: userId,
+    redirectUrl: `${appUrl}/sign-up?redirect_url=${encodeURIComponent("/dashboard")}`,
+    publicMetadata: { firstName: firstName ?? "", lastName: lastName ?? "" },
+  });
+
+  revalidatePath("/team");
+}
+
 export async function revokeProjectInvitation(projectId: string, invitationId: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");

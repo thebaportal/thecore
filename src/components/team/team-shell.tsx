@@ -2,11 +2,11 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Users, Clock, X, ChevronDown, Mail } from "lucide-react";
+import { Search, Users, X, ChevronDown, Mail, RefreshCw } from "lucide-react";
 import { UserAvatar } from "@/components/users/user-avatar";
 import { MessageButton } from "@/components/pings/message-button";
 import { InviteButton } from "@/components/team/invite-button";
-import { revokeOrgInvitation, type PendingOrgInvitation } from "@/actions/invitations";
+import { revokeOrgInvitation, resendOrgInvitation, type PendingOrgInvitation } from "@/actions/invitations";
 import type { TeamMember, TeamProject } from "@/actions/team";
 
 // ── Person card ───────────────────────────────────────────────────────────────
@@ -20,7 +20,6 @@ function PersonCard({
 }) {
   const [emailVisible, setEmailVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const isAdmin = person.orgRole === "OWNER" || person.orgRole === "ADMIN";
   const primaryProject = person.projects[0] ?? null;
 
   // Close email on outside click
@@ -50,9 +49,9 @@ function PersonCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{person.name}</p>
-          {isAdmin && (
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full shrink-0">
-              Admin
+          {person.orgRole === "OWNER" && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full shrink-0">
+              Owner
             </span>
           )}
         </div>
@@ -88,60 +87,130 @@ function PersonCard({
   );
 }
 
-// ── Pending invitations section ───────────────────────────────────────────────
+// ── Pending invitations dropdown ──────────────────────────────────────────────
 
-function PendingInvitationsSection({ invitations }: { invitations: PendingOrgInvitation[] }) {
+function PendingInvitationsDropdown({ invitations }: { invitations: PendingOrgInvitation[] }) {
+  const [open, setOpen] = useState(false);
   const [list, setList] = useState(invitations);
-  const [revoking, setRevoking] = useState<string | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Sync when prop changes (after router.refresh)
+  useEffect(() => { setList(invitations); }, [invitations]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  if (list.length === 0) return null;
 
   function handleRevoke(id: string) {
-    setRevoking(id);
+    setActing(id);
     startTransition(async () => {
       try {
         await revokeOrgInvitation(id);
         setList((prev) => prev.filter((inv) => inv.id !== id));
       } finally {
-        setRevoking(null);
+        setActing(null);
       }
     });
   }
 
-  if (list.length === 0) return null;
+  function handleResend(inv: PendingOrgInvitation) {
+    setActing(inv.id);
+    startTransition(async () => {
+      try {
+        await resendOrgInvitation(inv.id, inv.email, inv.role, inv.firstName, inv.lastName);
+        // Optimistically update the id isn't known; just close and refresh
+        setOpen(false);
+      } finally {
+        setActing(null);
+      }
+    });
+  }
 
   return (
-    <section className="mb-8">
-      <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-        <Clock className="w-3.5 h-3.5" />
-        {list.length} Pending {list.length === 1 ? "Invitation" : "Invitations"}
-      </p>
-      <div className="space-y-2">
-        {list.map((inv) => {
-          const name = [inv.firstName, inv.lastName].filter(Boolean).join(" ") || null;
-          const sentDate = new Date(inv.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-          return (
-            <div key={inv.id} className="bg-white rounded-xl border border-amber-100 shadow-sm px-4 py-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                {name && <p className="text-sm font-medium text-slate-700 truncate leading-tight">{name}</p>}
-                <p className="text-sm text-slate-500 truncate">{inv.email}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Invited {sentDate} · {inv.role === "org:admin" ? "Instructor / Admin" : "Member"}</p>
-              </div>
-              <button
-                onClick={() => handleRevoke(inv.id)}
-                disabled={revoking === inv.id}
-                title="Revoke invitation"
-                className="text-slate-300 hover:text-red-400 transition-colors disabled:opacity-40 shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+      >
+        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+        {list.length} pending
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-[480px] max-w-[calc(100vw-2rem)] bg-white rounded-xl border border-slate-200 shadow-xl z-50 overflow-hidden">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+              Pending Invitations · {list.length}
+            </p>
+            <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Rows */}
+          <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+            {list.map((inv) => {
+              const name = [inv.firstName, inv.lastName].filter(Boolean).join(" ") || null;
+              const date = new Date(inv.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+              const roleLabel = inv.role === "org:admin" ? "Admin" : "Member";
+              const isActing = acting === inv.id;
+
+              return (
+                <div key={inv.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                  {/* Avatar initial */}
+                  <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500 shrink-0">
+                    {(name ?? inv.email)[0]?.toUpperCase()}
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    {name && <p className="text-sm font-medium text-slate-800 truncate leading-tight">{name}</p>}
+                    <p className="text-xs text-slate-500 truncate">{inv.email}</p>
+                  </div>
+
+                  {/* Role */}
+                  <span className="text-xs text-slate-500 shrink-0 w-12 text-right">{roleLabel}</span>
+
+                  {/* Date */}
+                  <span className="text-xs text-slate-400 shrink-0 w-12 text-right">{date}</span>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleResend(inv)}
+                      disabled={isActing}
+                      title="Resend invitation"
+                      className="p-1.5 rounded-md text-slate-400 hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-40"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleRevoke(inv.id)}
+                      disabled={isActing}
+                      title="Cancel invitation"
+                      className="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -216,11 +285,11 @@ export function TeamShell({
             {people.length} {people.length === 1 ? "person" : "people"} · {projects.filter(p => p.status !== "ARCHIVED").length} active {projects.filter(p => p.status !== "ARCHIVED").length === 1 ? "project" : "projects"}
           </p>
         </div>
-        <InviteButton adminOnly onDone={() => router.refresh()} />
+        <div className="flex items-center gap-2 shrink-0">
+          <PendingInvitationsDropdown invitations={pendingInvitations} />
+          <InviteButton adminOnly onDone={() => router.refresh()} />
+        </div>
       </div>
-
-      {/* Pending invitations */}
-      <PendingInvitationsSection invitations={pendingInvitations} />
 
       {/* Search + Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
