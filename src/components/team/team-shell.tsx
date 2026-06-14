@@ -17,6 +17,7 @@ type Member = {
   jobTitle: string | null;
   orgRole: string;
   joinedAt: Date;
+  activeProject?: { id: string; name: string; color: string | null } | null;
 };
 
 type Project = {
@@ -156,30 +157,39 @@ function ProjectCard({
 
 function PersonCard({
   person,
-  project,
   currentDbUserId,
 }: {
   person: Member;
-  project: { id: string; name: string; color: string | null } | null;
   currentDbUserId: string | null;
 }) {
+  const project = person.activeProject ?? null;
+  const isAdmin = person.orgRole === "OWNER" || person.orgRole === "ADMIN";
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3.5 flex items-center gap-3 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-4 flex items-start gap-3.5 hover:shadow-md transition-shadow">
       <UserAvatar userId={person.userId} name={person.name} avatarUrl={person.avatarUrl} size="md" side="right" align="start" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{person.name}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{person.name}</p>
+          {isAdmin && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full shrink-0">
+              Admin
+            </span>
+          )}
+        </div>
         {person.jobTitle && (
-          <p className="text-xs text-slate-400 truncate mt-0.5">{person.jobTitle}</p>
+          <p className="text-xs text-slate-500 truncate mt-0.5">{person.jobTitle}</p>
         )}
-        {project ? (
-          <div className="flex items-center gap-1 mt-1">
+        <p className="text-xs text-slate-400 truncate mt-0.5">{person.email}</p>
+        {project && (
+          <div className="flex items-center gap-1.5 mt-1.5">
             <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
+              className="w-2 h-2 rounded-full shrink-0"
               style={{ backgroundColor: project.color ?? "#6366f1" }}
             />
-            <span className="text-xs text-slate-500 truncate">{project.name}</span>
+            <span className="text-xs font-medium text-slate-600 truncate">{project.name}</span>
           </div>
-        ) : null}
+        )}
       </div>
       {currentDbUserId && person.userId !== currentDbUserId && (
         <MessageButton targetUserId={person.userId} targetName={person.name} />
@@ -274,23 +284,14 @@ export function TeamShell({
 
   const activeCount = projects.filter((p) => p.status === "ACTIVE").length;
 
-  // Map each user to their first project (members should only be in one)
-  const projectByUser = new Map<string, { id: string; name: string; color: string | null }>();
-  for (const project of projects) {
-    for (const member of project.members) {
-      if (!projectByUser.has(member.userId)) {
-        projectByUser.set(member.userId, { id: project.id, name: project.name, color: project.color });
-      }
-    }
-  }
-
   // Filter people
   const filteredPeople = q
     ? people.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
           (p.jobTitle ?? "").toLowerCase().includes(q) ||
-          p.email.toLowerCase().includes(q)
+          p.email.toLowerCase().includes(q) ||
+          (p.activeProject?.name ?? "").toLowerCase().includes(q)
       )
     : people;
 
@@ -356,7 +357,6 @@ export function TeamShell({
               <PersonCard
                 key={person.id}
                 person={person}
-                project={projectByUser.get(person.userId) ?? null}
                 currentDbUserId={currentDbUserId}
               />
             ))}

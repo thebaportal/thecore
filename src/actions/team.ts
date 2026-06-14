@@ -18,7 +18,9 @@ export async function getTeamByProject() {
         },
         orderBy: { joinedAt: "asc" },
       },
+      // Only fetch non-archived projects — archived ones (incl. Basecamp "Coming Soon" dumps) are excluded
       projects: {
+        where: { status: { not: "ARCHIVED" } },
         include: {
           members: {
             include: {
@@ -42,12 +44,32 @@ export async function getTeamByProject() {
 
   const roleMap = new Map(org.memberships.map((m) => [m.userId, m.role]));
 
+  // Build set of userIds who are in at least one active project
+  const activeProjectMemberIds = new Set(
+    org.projects.flatMap((p) => p.members.map((m) => m.userId))
+  );
+
+  // Show admins/owners always + anyone in an active project
+  const visibleMemberships = org.memberships.filter(
+    (m) => m.role === "OWNER" || m.role === "ADMIN" || activeProjectMemberIds.has(m.userId)
+  );
+
+  // Map each userId to their active project (first match)
+  const projectByUser = new Map<string, { id: string; name: string; color: string | null }>();
+  for (const p of org.projects) {
+    for (const m of p.members) {
+      if (!projectByUser.has(m.userId)) {
+        projectByUser.set(m.userId, { id: p.id, name: p.name, color: p.color });
+      }
+    }
+  }
+
   const logoUrl = org.logoUrl && !org.logoUrl.includes("clerk") ? org.logoUrl : null;
   return {
     orgName: org.displayName ?? org.name,
     orgLogoUrl: logoUrl,
     currentDbUserId: dbUser?.id ?? null,
-    people: org.memberships.map((m) => ({
+    people: visibleMemberships.map((m) => ({
       id: m.id,
       userId: m.userId,
       name: m.user.name,
@@ -56,6 +78,7 @@ export async function getTeamByProject() {
       jobTitle: m.user.jobTitle,
       orgRole: m.role,
       joinedAt: m.joinedAt,
+      activeProject: projectByUser.get(m.userId) ?? null,
     })),
     projects: org.projects.map((p) => ({
       id: p.id,
